@@ -16,14 +16,150 @@
 		</dl>
 
 		<dl>
-			<dt><label for="advancedhide_thanks_table">{L_ADVANCEDHIDE_THANKS_TABLE}:</label><br /><span>{L_ADVANCEDHIDE_THANKS_TABLE_EXPLAIN}</span></dt>
-			<dd><input type="text" id="advancedhide_thanks_table" name="advancedhide_thanks_table" value="{THANKS_TABLE}" size="30" /></dd>
-		</dl>
-
-		<dl>
 			<dt><label for="advancedhide_max_blocks">{L_ADVANCEDHIDE_MAX_BLOCKS}:</label><br /><span>{L_ADVANCEDHIDE_MAX_BLOCKS_EXPLAIN}</span></dt>
 			<dd><input type="number" id="advancedhide_max_blocks" name="advancedhide_max_blocks" value="{MAX_BLOCKS}" min="1" max="100" /></dd>
 		</dl>
+
+		<dl>
+			<dt><label for="advancedhide_show_buttons">{L_ADVANCEDHIDE_SHOW_BUTTONS}:</label><br /><span>{L_ADVANCEDHIDE_SHOW_BUTTONS_EXPLAIN}</span></dt>
+			<dd>
+				<label><input type="radio" class="radio" name="advancedhide_show_buttons" value="1"<!-- IF SHOW_BUTTONS --> checked="checked"<!-- ENDIF --> /> {L_YES}</label>
+				<label><input type="radio" class="radio" name="advancedhide_show_buttons" value="0"<!-- IF not SHOW_BUTTONS --> checked="checked"<!-- ENDIF --> /> {L_NO}</label>
+			</dd>
+		</dl>
+	</fieldset>
+
+	<fieldset>
+		<legend>{L_ADVANCEDHIDE_SECURITY_LEGEND}</legend>
+
+		<dl>
+			<dt><label for="advancedhide_enable_captcha">{L_ADVANCEDHIDE_ENABLE_CAPTCHA}:</label><br /><span>{L_ADVANCEDHIDE_ENABLE_CAPTCHA_EXPLAIN}</span></dt>
+			<dd>
+				<label><input type="radio" class="radio" name="advancedhide_enable_captcha" value="1"<!-- IF ENABLE_CAPTCHA --> checked="checked"<!-- ENDIF --> /> {L_YES}</label>
+				<label><input type="radio" class="radio" name="advancedhide_enable_captcha" value="0"<!-- IF not ENABLE_CAPTCHA --> checked="checked"<!-- ENDIF --> /> {L_NO}</label>
+			</dd>
+		</dl>
+
+		<dl>
+			<dt><label for="advancedhide_rl_minute_limit">{L_ADVANCEDHIDE_RL_MINUTE}:</label><br /><span>{L_ADVANCEDHIDE_RL_MINUTE_EXPLAIN}</span></dt>
+			<dd><input type="number" id="advancedhide_rl_minute_limit" name="advancedhide_rl_minute_limit" value="{RL_MINUTE_LIMIT}" min="1" max="60" /></dd>
+		</dl>
+
+		<dl>
+			<dt><label for="advancedhide_rl_day_limit">{L_ADVANCEDHIDE_RL_DAY}:</label><br /><span>{L_ADVANCEDHIDE_RL_DAY_EXPLAIN}</span></dt>
+			<dd><input type="number" id="advancedhide_rl_day_limit" name="advancedhide_rl_day_limit" value="{RL_DAY_LIMIT}" min="1" max="1000" /></dd>
+		</dl>
+	</fieldset>
+
+	<fieldset>
+		<legend>{L_ADVANCEDHIDE_MODULES_LEGEND}</legend>
+		<p>{L_ADVANCEDHIDE_MODULES_EXPLAIN}</p>
+
+		<table class="table1 zebra-table">
+			<thead>
+				<tr>
+					<th>{L_ADVANCEDHIDE_TH_MODULE}</th>
+					<th>{L_ADVANCEDHIDE_TH_STATUS}</th>
+					<th>{L_ADVANCEDHIDE_TH_ICON}</th>
+					<th>{L_ADVANCEDHIDE_TH_SETTINGS}</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td><strong>{L_ADVHIDE_MOD_GUEST}</strong></td>
+					<td>
+						<label><input type="radio" name="advancedhide_mod_guest" value="1"<!-- IF MOD_GUEST --> checked="checked"<!-- ENDIF --> /> {L_ENABLED}</label>
+						<label><input type="radio" name="advancedhide_mod_guest" value="0"<!-- IF not MOD_GUEST --> checked="checked"<!-- ENDIF --> /> {L_DISABLED}</label>
+					</td>
+					<td><input type="text" name="advancedhide_icon_guest" value="{ICON_GUEST}" size="18" /> <i class="fa {ICON_GUEST}"></i></td>
+					<td>-</td>
+				</tr>
+				<tr>
+					<td><strong>{L_ADVHIDE_MOD_POSTS}</strong></td>
+					<td>
+						<label><input type="radio" name="advancedhide_mod_posts" value="1"<!-- IF MOD_POSTS --> checked="checked"<!-- ENDIF --> /> {L_ENABLED}</label>
+						<label><input type="radio" name="advancedhide_mod_posts" value="0"<!-- IF not MOD_POSTS --> checked="checked"<!-- ENDIF --> /> {L_DISABLED}</label>
+					</td>
+					<td><input type="text" name="advancedhide_icon_posts" value="{ICON_POSTS}" size="18" /> <i class="fa {ICON_POSTS}"></i></td>
+					<td>-</td>
+				</tr>
+				<tr>
+					<td><strong>{L_ADVHIDE_MOD_DAYS}</strong></td>
+					<td>
+						<label><input type="radio" name="advancedhide_mod_days" value="1"<!-- IF MOD_DAYS --> checked="checked"<!-- ENDIF --> /> {L_ENABLED}</label>
+						<label><input type="radio" name="advancedhide_mod_days" value="0"<!-- IF not MOD_DAYS --> checked="checked"<!-- ENDIF --> /> {L_DISABLED}</label>
+					</td>
+					<td><input type="text" name="advancedhide_icon_days" value="{ICON_DAYS}" size="18" /> <i class="fa {ICON_DAYS}"></i></td>
+					<td>-</td>
+				</tr>
+				<tr>
+					<td><strong>{L_ADVHIDE_MOD_TIME}</strong></td>
+					<td>
+						<label><input type="radio" name="advancedhide_mod_time" value="1"<!-- IF MOD_TIME --> checked="checked"<!-- ENDIF --> /> {L_ENABLED}</label>
+						<label><input type="radio" name="advancedhide_mod_time" value="0"<!-- IF not MOD_TIME --> checked="checked"<!-- ENDIF --> /> {L_DISABLED}</label>
+					</td>
+					<td><input type="text" name="advancedhide_icon_time" value="{ICON_TIME}" size="18" /> <i class="fa {ICON_TIME}"></i></td>
+					<td>-</td>
+				</tr>
+				<tr>
+					<td><strong>{L_ADVHIDE_MOD_REGDATE}</strong></td>
+					<td>
+						<label><input type="radio" name="advancedhide_mod_regdate" value="1"<!-- IF MOD_REGDATE --> checked="checked"<!-- ENDIF --> /> {L_ENABLED}</label>
+						<label><input type="radio" name="advancedhide_mod_regdate" value="0"<!-- IF not MOD_REGDATE --> checked="checked"<!-- ENDIF --> /> {L_DISABLED}</label>
+					</td>
+					<td><input type="text" name="advancedhide_icon_regdate" value="{ICON_REGDATE}" size="18" /> <i class="fa {ICON_REGDATE}"></i></td>
+					<td>-</td>
+				</tr>
+				<tr>
+					<td><strong>{L_ADVHIDE_MOD_REPLY}</strong></td>
+					<td>
+						<label><input type="radio" name="advancedhide_mod_reply" value="1"<!-- IF MOD_REPLY --> checked="checked"<!-- ENDIF --> /> {L_ENABLED}</label>
+						<label><input type="radio" name="advancedhide_mod_reply" value="0"<!-- IF not MOD_REPLY --> checked="checked"<!-- ENDIF --> /> {L_DISABLED}</label>
+					</td>
+					<td><input type="text" name="advancedhide_icon_reply" value="{ICON_REPLY}" size="18" /> <i class="fa {ICON_REPLY}"></i></td>
+					<td>-</td>
+				</tr>
+				<tr>
+					<td><strong>{L_ADVHIDE_MOD_THANKS}</strong></td>
+					<td>
+						<label><input type="radio" name="advancedhide_mod_thanks" value="1"<!-- IF MOD_THANKS --> checked="checked"<!-- ENDIF --> /> {L_ENABLED}</label>
+						<label><input type="radio" name="advancedhide_mod_thanks" value="0"<!-- IF not MOD_THANKS --> checked="checked"<!-- ENDIF --> /> {L_DISABLED}</label>
+					</td>
+					<td><input type="text" name="advancedhide_icon_thanks" value="{ICON_THANKS}" size="18" /> <i class="fa {ICON_THANKS}"></i></td>
+					<td>
+						<label>{L_ADVANCEDHIDE_THANKS_TABLE}:</label>
+						<input type="text" name="advancedhide_thanks_table" value="{THANKS_TABLE}" size="15" />
+					</td>
+				</tr>
+				<tr>
+					<td><strong>{L_ADVHIDE_MOD_GROUPS}</strong></td>
+					<td>
+						<label><input type="radio" name="advancedhide_mod_groups" value="1"<!-- IF MOD_GROUPS --> checked="checked"<!-- ENDIF --> /> {L_ENABLED}</label>
+						<label><input type="radio" name="advancedhide_mod_groups" value="0"<!-- IF not MOD_GROUPS --> checked="checked"<!-- ENDIF --> /> {L_DISABLED}</label>
+					</td>
+					<td><input type="text" name="advancedhide_icon_groups" value="{ICON_GROUPS}" size="18" /> <i class="fa {ICON_GROUPS}"></i></td>
+					<td>-</td>
+				</tr>
+				<tr>
+					<td><strong>{L_ADVHIDE_MOD_USERS}</strong></td>
+					<td>
+						<label><input type="radio" name="advancedhide_mod_users" value="1"<!-- IF MOD_USERS --> checked="checked"<!-- ENDIF --> /> {L_ENABLED}</label>
+						<label><input type="radio" name="advancedhide_mod_users" value="0"<!-- IF not MOD_USERS --> checked="checked"<!-- ENDIF --> /> {L_DISABLED}</label>
+					</td>
+					<td><input type="text" name="advancedhide_icon_users" value="{ICON_USERS}" size="18" /> <i class="fa {ICON_USERS}"></i></td>
+					<td>-</td>
+				</tr>
+				<tr>
+					<td><strong>{L_ADVHIDE_MOD_PASS}</strong></td>
+					<td>
+						<label><input type="radio" name="advancedhide_mod_pass" value="1"<!-- IF MOD_PASS --> checked="checked"<!-- ENDIF --> /> {L_ENABLED}</label>
+						<label><input type="radio" name="advancedhide_mod_pass" value="0"<!-- IF not MOD_PASS --> checked="checked"<!-- ENDIF --> /> {L_DISABLED}</label>
+					</td>
+					<td><input type="text" name="advancedhide_icon_pass" value="{ICON_PASS}" size="18" /> <i class="fa {ICON_PASS}"></i></td>
+					<td>-</td>
+				</tr>
+			</tbody>
+		</table>
 
 		<p class="submit-buttons">
 			<input class="button1" type="submit" id="submit" name="submit" value="{L_SUBMIT}" />&nbsp;

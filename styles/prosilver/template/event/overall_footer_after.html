@@ -1,53 +1,143 @@
 <script>
 (function($) {
-    'use strict';
-    $(document).on('click', '.hide-pass-submit', function(e) {
-        e.preventDefault();
-        var $btn   = $(this);
-        var $form  = $btn.closest('.hide-pass-form');
-        var $box   = $form.closest('.advancedhide-box');
-        var $msg   = $form.find('.hide-pass-msg');
+	'use strict';
 
-        var postId   = $form.data('postid');
-        var blockId  = $form.data('blockid');
-        var passVal  = $form.find('.hide-pass-input').val();
+	// 1. Обработка кликов по кнопкам в BBCode-редакторе
+	$(document).on('click', '.advhide-btn', function(e) {
+		e.preventDefault();
+		var type = $(this).data('type');
+		var opener = '[hide]';
+		var closer = '[/hide]';
 
-        var formTok  = $form.find('.hide-token').val() || '';
-        var creatTime = $form.find('.hide-creation-time').val() || '';
+		switch (type) {
+			case 'guest':
+				opener = '[hide]';
+				break;
+			case 'posts':
+				var count = prompt('{LA_HIDE_PROMPT_POSTS}', '10');
+				if (count === null) return;
+				count = parseInt(count, 10) || 1;
+				opener = '[hide=posts,' + count + ']';
+				break;
+			case 'days':
+				var days = prompt('{LA_HIDE_PROMPT_DAYS}', '30');
+				if (days === null) return;
+				days = parseInt(days, 10) || 1;
+				opener = '[hide=days,' + days + ']';
+				break;
+			case 'time':
+				var dt = prompt('{LA_HIDE_PROMPT_TIME}', '2026-12-31 23:59:59');
+				if (!dt) return;
+				opener = '[hide=time,' + dt.replace(/[;\]]/g, '') + ']';
+				break;
+			case 'regdate':
+				var rd = prompt('{LA_HIDE_PROMPT_REGDATE}', '2026-01-01');
+				if (!rd) return;
+				opener = '[hide=regdate,' + rd.replace(/[;\]]/g, '') + ']';
+				break;
+			case 'reply':
+				opener = '[hide=reply]';
+				break;
+			case 'thanks':
+				opener = '[hide=thanks]';
+				break;
+			case 'groups':
+				var grps = prompt('{LA_HIDE_PROMPT_GROUPS}', '2');
+				if (!grps) return;
+				opener = '[hide=groups,' + grps.replace(/[;\]\s]/g, '') + ']';
+				break;
+			case 'users':
+				var usrs = prompt('{LA_HIDE_PROMPT_USERS}', 'admin,moderator');
+				if (!usrs) return;
+				opener = '[hide=users,' + usrs.replace(/[;\]]/g, '') + ']';
+				break;
+			case 'pass':
+				var pass = prompt('{LA_HIDE_PROMPT_PASS}', '');
+				if (!pass) return;
+				opener = '[hide=pass,' + pass.replace(/[;\]]/g, '') + ']';
+				break;
+		}
 
-        if (!passVal) return;
+		var textarea = document.getElementById('message') || document.querySelector('textarea[name="message"]');
+		if (textarea) {
+			if (typeof bbfontstyle === 'function') {
+				bbfontstyle(opener, closer);
+			} else {
+				var start = textarea.selectionStart || 0;
+				var end = textarea.selectionEnd || 0;
+				var sel = textarea.value.substring(start, end);
+				var rep = opener + sel + closer;
+				textarea.value = textarea.value.substring(0, start) + rep + textarea.value.substring(end);
+				textarea.selectionStart = start + opener.length;
+				textarea.selectionEnd = start + opener.length + sel.length;
+				textarea.focus();
+			}
+		}
+	});
 
-        $btn.prop('disabled', true);
-        $msg.text('');
+	// 2. Обработка AJAX-разблокировки паролем с поддержкой Captcha
+	$(document).on('click', '.hide-pass-submit', function(e) {
+		e.preventDefault();
+		var $btn   = $(this);
+		var $form  = $btn.closest('.hide-pass-form');
+		var $box   = $form.closest('.advancedhide-box');
+		var $msg   = $form.find('.hide-pass-msg');
 
-        $.ajax({
-            url: '{U_ADVANCEDHIDE_UNLOCK}',
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                post_id: postId,
-                block_id: blockId,
-                password: passVal,
-                form_token: formTok,
-                creation_time: creatTime
-            },
-            success: function(res) {
-                if (res.success && res.html) {
-                    $box.replaceWith(res.html);
-                } else {
-                    $msg.text(res.message || 'Error');
-                    $btn.prop('disabled', false);
-                }
-            },
-            error: function(xhr) {
-                var err = 'Error';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    err = xhr.responseJSON.message;
-                }
-                $msg.text(err);
-                $btn.prop('disabled', false);
-            }
-        });
-    });
+		var postId   = $form.data('postid');
+		var blockId  = $form.data('blockid');
+		var passVal  = $form.find('.hide-pass-input').val();
+		var formTok  = $form.find('.hide-token').val() || '';
+		var creatTime = $form.find('.hide-creation-time').val() || '';
+
+		if (!passVal) return;
+
+		var postData = {
+			post_id: postId,
+			block_id: blockId,
+			password: passVal,
+			form_token: formTok,
+			creation_time: creatTime
+		};
+
+		// Сбор всех полей Captcha, расположенных внутри этой формы
+		$form.find('input, select, textarea').each(function() {
+			var name = $(this).attr('name');
+			if (name && typeof postData[name] === 'undefined') {
+				postData[name] = $(this).val();
+			}
+		});
+
+		$btn.prop('disabled', true);
+		$msg.text('');
+
+		$.ajax({
+			url: '{U_ADVANCEDHIDE_UNLOCK}',
+			type: 'POST',
+			dataType: 'json',
+			data: postData,
+			success: function(res) {
+				if (res.success && res.html) {
+					$box.replaceWith(res.html);
+				} else {
+					$msg.text(res.message || 'Error');
+					if (res.new_captcha) {
+						$form.find('.hide-captcha-slot').html(res.new_captcha);
+					}
+					$btn.prop('disabled', false);
+				}
+			},
+			error: function(xhr) {
+				var err = 'Error';
+				if (xhr.responseJSON && xhr.responseJSON.message) {
+					err = xhr.responseJSON.message;
+				}
+				if (xhr.responseJSON && xhr.responseJSON.new_captcha) {
+					$form.find('.hide-captcha-slot').html(xhr.responseJSON.new_captcha);
+				}
+				$msg.text(err);
+				$btn.prop('disabled', false);
+			}
+		});
+	});
 })(jQuery);
 </script>

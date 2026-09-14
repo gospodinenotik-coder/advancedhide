@@ -17,6 +17,11 @@
 	background: #f5fbf5;
 }
 
+.advancedhide-box.hide-disabled {
+	border-color: #f0ad4e;
+	background: #fcf8e3;
+}
+
 .advancedhide-box .hide-header {
 	background: #e9eff5;
 	padding: 6px 10px;
@@ -37,6 +42,12 @@
 	color: #155724;
 }
 
+.advancedhide-box.hide-disabled .hide-header {
+	background: #fcf8e3;
+	border-bottom-color: #faebcc;
+	color: #8a6d3b;
+}
+
 .advancedhide-box .hide-body, .advancedhide-box .hide-content {
 	padding: 10px;
 }
@@ -47,12 +58,23 @@
 	color: #a94442;
 }
 
+.hide-disabled .hide-reasons {
+	color: #8a6d3b;
+}
+
 .hide-pass-form {
-	margin-top: 8px;
+	margin-top: 10px;
+}
+
+.hide-pass-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 }
 
 .hide-pass-msg {
-	margin-left: 8px;
+	margin-top: 6px;
+	display: block;
 	font-weight: bold;
 	color: #d9534f;
 }
@@ -67,3 +89,49 @@
 
 .hide-override-badge.mod { background: #0275d8; }
 .hide-override-badge.author { background: #5cb85c; }
+
+/* Капча в форме разблокировки */
+.advhide-captcha-box {
+	margin-top: 8px;
+	padding: 8px;
+	background: #fff;
+	border: 1px solid #e0e0e0;
+	border-radius: 4px;
+	display: inline-block;
+}
+
+.advhide-captcha-q {
+	display: block;
+	margin-bottom: 4px;
+	color: #333;
+}
+
+.advhide-captcha-img {
+	margin-bottom: 4px;
+}
+
+.advhide-captcha-input {
+	margin-top: 4px;
+}
+
+/* Кнопки в BBCode редакторе */
+.advhide-editor-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin: 6px 0;
+	padding: 4px;
+	background: #f4f6f8;
+	border: 1px solid #dcdcdc;
+	border-radius: 4px;
+}
+
+.advhide-btn {
+	cursor: pointer;
+	padding: 3px 8px;
+	font-size: 0.9em;
+}
+
+.advhide-btn i {
+	margin-right: 3px;
+}

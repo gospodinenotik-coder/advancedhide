@@ -70,9 +70,19 @@ class main_listener implements EventSubscriberInterface
 
 	public function assign_common_vars($event)
 	{
-		$this->template->assign_vars([
-			'U_ADVANCEDHIDE_UNLOCK' => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/unlock'),
-		]);
+		$modules = ['guest', 'posts', 'days', 'time', 'regdate', 'reply', 'thanks', 'groups', 'users', 'pass'];
+		$vars = [
+			'U_ADVANCEDHIDE_UNLOCK'   => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/unlock'),
+			'S_ADVHIDE_SHOW_BUTTONS'  => (bool)($this->config['advancedhide_show_buttons'] ?? 1),
+		];
+
+		foreach ($modules as $m)
+		{
+			$vars['S_ADVHIDE_MOD_' . strtoupper($m)]  = $this->auth_service->is_module_enabled($m);
+			$vars['ADVHIDE_ICON_' . strtoupper($m)]   = htmlspecialchars($this->config['advancedhide_icon_' . $m] ?? 'fa-eye-slash', ENT_QUOTES, 'UTF-8');
+		}
+
+		$this->template->assign_vars($vars);
 	}
 
 	public function register_permissions($event)
@@ -198,6 +208,22 @@ class main_listener implements EventSubscriberInterface
 				'</div>';
 			}
 
+			// Если модуль отключен в ACP, показываем специальную заглушку
+			if (!empty($eval['has_disabled_module']))
+			{
+				$reasons_html = '<ul class="hide-reasons">';
+				foreach ($eval['failed_conditions'] as $fc)
+				{
+					$reasons_html .= '<li>' . htmlspecialchars($fc, ENT_QUOTES, 'UTF-8') . '</li>';
+				}
+				$reasons_html .= '</ul>';
+
+				return '<div class="advancedhide-box hide-locked hide-disabled" id="hide-' . $context['post_id'] . '-' . $block->block_index . '">' .
+					'<div class="hide-header"><i class="fa fa-pause-circle"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_DISABLED'), ENT_QUOTES, 'UTF-8') . '</div>' .
+					'<div class="hide-body">' . $reasons_html . '</div>' .
+				'</div>';
+			}
+
 			$reasons_html = '';
 			if (!empty($eval['failed_conditions']))
 			{
@@ -210,13 +236,17 @@ class main_listener implements EventSubscriberInterface
 			}
 
 			$pass_form = '';
-			if ($block->has_password)
+			if ($block->has_password && $this->auth_service->is_module_enabled('pass'))
 			{
+				$captcha_html = $this->auth_service->generate_captcha_html();
 				$pass_form = '<div class="hide-pass-form" data-postid="' . $context['post_id'] . '" data-blockid="' . $block->block_index . '">' .
 					'<input type="hidden" class="hide-token" name="form_token" value="' . htmlspecialchars($form_token, ENT_QUOTES, 'UTF-8') . '" />' .
 					'<input type="hidden" class="hide-creation-time" name="creation_time" value="' . (int)$now . '" />' .
-					'<input type="password" class="inputbox autowidth hide-pass-input" placeholder="' . htmlspecialchars($this->language->lang('HIDE_PASS_PLACEHOLDER'), ENT_QUOTES, 'UTF-8') . '" /> ' .
-					'<button type="button" class="button2 hide-pass-submit">' . htmlspecialchars($this->language->lang('HIDE_PASS_SUBMIT'), ENT_QUOTES, 'UTF-8') . '</button>' .
+					'<div class="hide-pass-row">' .
+						'<input type="password" class="inputbox autowidth hide-pass-input" placeholder="' . htmlspecialchars($this->language->lang('HIDE_PASS_PLACEHOLDER'), ENT_QUOTES, 'UTF-8') . '" /> ' .
+						'<button type="button" class="button2 hide-pass-submit">' . htmlspecialchars($this->language->lang('HIDE_PASS_SUBMIT'), ENT_QUOTES, 'UTF-8') . '</button>' .
+					'</div>' .
+					'<div class="hide-captcha-slot">' . $captcha_html . '</div>' .
 					'<span class="hide-pass-msg"></span>' .
 				'</div>';
 			}
@@ -236,7 +266,7 @@ class main_listener implements EventSubscriberInterface
 		$mode = isset($event['mode']) ? (string)$event['mode'] : '';
 		$page_data = $event['page_data'];
 
-		// 1. Режим цитирования чужого сообщения: замена на защитную заглушку
+		// 1. Режим цитирования: замена на заглушку
 		if ($mode === 'quote' && !empty($page_data['MESSAGE']))
 		{
 			$post_data = isset($event['post_data']) && is_array($event['post_data']) ? $event['post_data'] : [];
@@ -254,7 +284,7 @@ class main_listener implements EventSubscriberInterface
 			}
 		}
 
-		// 2. Режим предпросмотра: обрабатываем разметку в окне превью через Twig, не повреждая textarea автора
+		// 2. Режим предпросмотра: обработка PREVIEW_MESSAGE через Twig
 		if (!empty($event['preview']))
 		{
 			$preview_text = '';
@@ -274,7 +304,7 @@ class main_listener implements EventSubscriberInterface
 					'forum_id'  => (int)($event['forum_id'] ?? 0),
 					'topic_id'  => (int)($event['topic_id'] ?? 0),
 					'post_id'   => 0,
-					'poster_id' => 0, // В превью нового поста авторский оверрайд не дает ложного допуска
+					'poster_id' => 0,
 				];
 
 				$idx = 0;

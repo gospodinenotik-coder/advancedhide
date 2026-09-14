@@ -17,6 +17,9 @@ services:
             - '@language'
             - '@cache.driver'
             - '%core.table_prefix%'
+            - '@captcha.factory'
+            - '%core.root_path%'
+            - '%core.php_ext%'
 
     vendor.advancedhide.listener:
         class: vendor\advancedhide\event\main_listener
@@ -47,5 +50,6 @@ services:
             - '@cache.driver'
             - '@vendor.advancedhide.parser'
             - '@vendor.advancedhide.auth_service'
+            - '@captcha.factory'
             - '%core.root_path%'
             - '%core.php_ext%'

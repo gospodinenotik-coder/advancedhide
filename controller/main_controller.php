@@ -14,6 +14,7 @@ use phpbb\db\driver\driver_interface;
 use phpbb\request\request_interface;
 use phpbb\language\language;
 use phpbb\cache\driver\driver_interface as cache_interface;
+use phpbb\captcha\factory as captcha_factory;
 use vendor\advancedhide\service\block_parser;
 use vendor\advancedhide\service\auth_service;
 
@@ -28,10 +29,11 @@ class main_controller
 	protected $cache;
 	protected $parser;
 	protected $auth_service;
+	protected $captcha_factory;
 	protected $phpbb_root_path;
 	protected $php_ext;
 
-	public function __construct(config $config, user $user, auth $auth, driver_interface $db, request_interface $request, language $language, cache_interface $cache, block_parser $parser, auth_service $auth_service, $phpbb_root_path, $php_ext)
+	public function __construct(config $config, user $user, auth $auth, driver_interface $db, request_interface $request, language $language, cache_interface $cache, block_parser $parser, auth_service $auth_service, captcha_factory $captcha_factory, $phpbb_root_path, $php_ext)
 	{
 		$this->config = $config;
 		$this->user = $user;
@@ -42,6 +44,7 @@ class main_controller
 		$this->cache = $cache;
 		$this->parser = $parser;
 		$this->auth_service = $auth_service;
+		$this->captcha_factory = $captcha_factory;
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
 	}
@@ -56,6 +59,12 @@ class main_controller
 		if (!check_form_key('advancedhide_unlock'))
 		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FORM_INVALID')], 403);
+		}
+
+		// Проверка: включен ли модуль парольной защиты в ACP
+		if (!$this->auth_service->is_module_enabled('pass'))
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_COND_MODULE_DISABLED', $this->auth_service->get_module_title('pass'))], 403);
 		}
 
 		$post_id  = $this->request->variable('post_id', 0);
@@ -85,7 +94,7 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
 		}
 
-		// Корректная проверка доступа к разделу, защищенному паролем phpBB
+		// Безопасная десериализация паролей раздела без разрешения классов (Hardening)
 		$sql_f = 'SELECT forum_password FROM ' . FORUMS_TABLE . ' WHERE forum_id = ' . (int)$forum_id;
 		$res_f = $this->db->sql_query($sql_f);
 		$forum_data = $this->db->sql_fetchrow($res_f);
@@ -93,7 +102,9 @@ class main_controller
 
 		if (!empty($forum_data['forum_password']))
 		{
-			$session_passwords = !empty($this->user->data['session_forum_passwords']) ? (array)@unserialize($this->user->data['session_forum_passwords']) : [];
+			$session_passwords = !empty($this->user->data['session_forum_passwords'])
+				? (array)@unserialize($this->user->data['session_forum_passwords'], ['allowed_classes' => false])
+				: [];
 			if (empty($session_passwords[$forum_id]))
 			{
 				return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
@@ -112,10 +123,42 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 400);
 		}
 
-		$identity = hash('sha256', $this->user->ip . '|' . (int)$this->user->data['user_id'] . '|' . $post_id . '|' . $block->block_hash);
+		// Rate Limiting (потребление лимита выполняется ДО валидации для пресечения брутфорса)
+		$identity = hash('sha256', $this->user->ip . '|' . (int) $this->user->data['user_id'] . '|' . $post_id . '|' . $block->block_hash);
 		if (!$this->auth_service->consume_rate_limit($identity))
 		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_RATE_LIMIT_EXCEEDED')], 429);
+		}
+
+		// Проверка встроенной Captcha phpBB (если включена в ACP)
+		if (!empty($this->config['advancedhide_enable_captcha']))
+		{
+			$plugin_name = $this->config['captcha_plugin'];
+			if (!empty($plugin_name))
+			{
+				try
+				{
+					$captcha = $this->captcha_factory->get_instance($plugin_name);
+					if ($captcha->is_available())
+					{
+						$captcha->init(CONFIRM_POST);
+						$vc_response = $captcha->validate();
+						if ($vc_response !== false)
+						{
+							$err_text = $this->language->is_set($vc_response) ? $this->language->lang($vc_response) : ($vc_response ?: $this->language->lang('CONFIRM_CODE_WRONG'));
+							return new JsonResponse([
+								'success'       => false,
+								'message'       => $err_text,
+								'captcha_error' => true,
+								'new_captcha'   => $this->auth_service->generate_captcha_html(),
+							], 400);
+						}
+					}
+				}
+				catch (\Exception $e)
+				{
+				}
+			}
 		}
 
 		if ($block->password_hash !== '' && password_verify($pass, $block->password_hash))
@@ -161,6 +204,10 @@ class main_controller
 			return new JsonResponse(['success' => true, 'html' => $html]);
 		}
 
-		return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_PASS_INCORRECT')], 401);
+		return new JsonResponse([
+			'success'     => false,
+			'message'     => $this->language->lang('HIDE_PASS_INCORRECT'),
+			'new_captcha' => !empty($this->config['advancedhide_enable_captcha']) ? $this->auth_service->generate_captcha_html() : '',
+		], 401);
 	}
 }
