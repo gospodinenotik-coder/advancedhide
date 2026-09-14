@@ -48,11 +48,13 @@ class main_controller
 
 	public function unlock()
 	{
-		if (!$this->request->is_ajax()) {
+		if (!$this->request->is_ajax())
+		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('INVALID_REQUEST')], 400);
 		}
 
-		if (!check_form_key('advancedhide_unlock')) {
+		if (!check_form_key('advancedhide_unlock'))
+		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FORM_INVALID')], 403);
 		}
 
@@ -60,7 +62,7 @@ class main_controller
 		$block_id = $this->request->variable('block_id', 0);
 		$pass     = $this->request->variable('password', '', true, request_interface::POST);
 
-		$sql = 'SELECT p.post_id, p.topic_id, p.forum_id, p.poster_id, p.post_text, p.post_visibility, p.bbcode_uid, p.bbcode_bitfield, p.bbcode_options, t.topic_visibility
+		$sql = 'SELECT p.post_id, p.topic_id, p.forum_id, p.poster_id, p.post_text, p.post_visibility, p.bbcode_uid, p.bbcode_bitfield, p.enable_bbcode, p.enable_smilies, p.enable_magic_url, t.topic_visibility
 				FROM ' . POSTS_TABLE . ' p
 				JOIN ' . TOPICS_TABLE . ' t ON (p.topic_id = t.topic_id)
 				WHERE p.post_id = ' . (int)$post_id;
@@ -68,7 +70,8 @@ class main_controller
 		$post = $this->db->sql_fetchrow($res);
 		$this->db->sql_freeresult($res);
 
-		if (!$post) {
+		if (!$post)
+		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 404);
 		}
 
@@ -77,33 +80,40 @@ class main_controller
 
 		if (!$this->auth->acl_get('f_read', $forum_id) ||
 			($post['post_visibility'] != ITEM_APPROVED && !$can_approve) ||
-			($post['topic_visibility'] != ITEM_APPROVED && !$can_approve)) {
+			($post['topic_visibility'] != ITEM_APPROVED && !$can_approve))
+		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
 		}
 
-		if (!function_exists('check_forum_password')) {
+		if (!function_exists('check_forum_password'))
+		{
 			include_once($this->phpbb_root_path . 'includes/functions_display.' . $this->php_ext);
 		}
-		if (!check_forum_password($forum_id)) {
+		if (!check_forum_password($forum_id))
+		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
 		}
 
 		$blocks = $this->parser->parse_blocks($post['post_text']);
-		if (!isset($blocks[$block_id - 1])) {
+		if (!isset($blocks[$block_id - 1]))
+		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 404);
 		}
 
 		$block = $blocks[$block_id - 1];
-		if (!$block->has_password) {
+		if (!$block->has_password)
+		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 400);
 		}
 
 		$identity = hash('sha256', $this->user->ip . '|' . (int)$this->user->data['user_id'] . '|' . $post_id . '|' . $block->block_hash);
-		if (!$this->auth_service->consume_rate_limit($identity)) {
+		if (!$this->auth_service->consume_rate_limit($identity))
+		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_RATE_LIMIT_EXCEEDED')], 429);
 		}
 
-		if ($block->password_hash !== '' && password_verify($pass, $block->password_hash)) {
+		if ($block->password_hash !== '' && password_verify($pass, $block->password_hash))
+		{
 			$context = [
 				'forum_id'          => $forum_id,
 				'topic_id'          => (int)$post['topic_id'],
@@ -114,7 +124,8 @@ class main_controller
 			];
 
 			$re_eval = $this->auth_service->evaluate_block($block, $context);
-			if (!$re_eval['can_view']) {
+			if (!$re_eval['can_view'])
+			{
 				return new JsonResponse([
 					'success' => false,
 					'message' => $this->language->lang('HIDE_PASS_OK_OTHER_FAILED_GENERIC')
@@ -123,13 +134,16 @@ class main_controller
 
 			$this->auth_service->unlock_block($post_id, $block);
 
-			if (!function_exists('generate_text_for_display')) {
+			if (!function_exists('generate_text_for_display'))
+			{
 				include_once($this->phpbb_root_path . 'includes/functions_content.' . $this->php_ext);
 			}
 
-			$rendered_all = generate_text_for_display($post['post_text'], $post['bbcode_uid'], $post['bbcode_bitfield'], $post['bbcode_options']);
+			$bbcode_options = ($post['enable_bbcode'] ? 1 : 0) | ($post['enable_smilies'] ? 2 : 0) | ($post['enable_magic_url'] ? 4 : 0);
+			$rendered_all = generate_text_for_display($post['post_text'], $post['bbcode_uid'], $post['bbcode_bitfield'], $bbcode_options);
 			$rendered_inner = '';
-			if (preg_match_all('/<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>/is', $rendered_all, $matches)) {
+			if (preg_match_all('/<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>/is', $rendered_all, $matches))
+			{
 				$rendered_inner = $matches[2][$block_id - 1] ?? '';
 			}
 

@@ -53,6 +53,7 @@ class main_listener implements EventSubscriberInterface
 			'core.permissions'                          => 'register_permissions',
 			'core.text_formatter_s9e_configure_before' => 'configure_bbcode',
 			'core.modify_text_for_storage_before'       => 'canonicalize_on_storage',
+			'core.modify_submit_post_data'              => 'canonicalize_on_submit',
 			'core.viewtopic_modify_post_row'            => 'process_post_hide',
 			'core.posting_modify_template_vars'         => 'protect_quote_and_preview',
 			'core.search_modify_post_row'               => 'protect_search',
@@ -87,30 +88,48 @@ class main_listener implements EventSubscriberInterface
 	public function configure_bbcode($event)
 	{
 		$configurator = $event['configurator'];
-		if (isset($configurator->tags['HIDE'])) return;
+		if (isset($configurator->tags['HIDE']))
+		{
+			return;
+		}
 
 		$tag = $configurator->tags->add('HIDE');
-		$tag->attributes->add('cond')->defaultValue = 'guest';
+		$tag->attributes->add('hide')->defaultValue = 'guest';
 
 		$filter = new RegexpFilter('/^[a-zA-Z0-9_,;:\/\$\.\-\+ ]*$/D');
-		$tag->attributes['cond']->filterChain->append($filter);
+		$tag->attributes['hide']->filterChain->append($filter);
 		$tag->nestingLimit = 1;
 
-		$tag->template = '<HIDE cond="{@cond}"><xsl:apply-templates/></HIDE>';
+		$tag->template = '<hide cond="{@hide}"><xsl:apply-templates/></hide>';
 
-		$bbcode = $configurator->BBCodes->addCustom(
+		$configurator->BBCodes->addCustom(
 			'[hide={TEXT1?}]{TEXT2}[/hide]',
-			'<HIDE cond="{@cond}"><xsl:apply-templates/></HIDE>'
+			'<hide cond="{@hide}"><xsl:apply-templates/></hide>'
 		);
-		$bbcode->defaultAttribute = 'cond';
 	}
 
 	public function canonicalize_on_storage($event)
 	{
 		$text = $event['text'];
 		$canonical = $this->parser->canonicalize_and_hash($text);
-		if ($canonical !== $text) {
+		if ($canonical !== $text)
+		{
 			$event['text'] = $canonical;
+		}
+	}
+
+	public function canonicalize_on_submit($event)
+	{
+		$data = $event['data'];
+		if (!empty($data['message']))
+		{
+			$canonical = $this->parser->canonicalize_and_hash($data['message']);
+			if ($canonical !== $data['message'])
+			{
+				$data['message'] = $canonical;
+				$data['message_md5'] = md5($canonical);
+				$event['data'] = $data;
+			}
 		}
 	}
 
@@ -120,15 +139,17 @@ class main_listener implements EventSubscriberInterface
 		$row      = $event['row'];
 		$text     = $post_row['MESSAGE'];
 
-		if (strpos($text, '<HIDE') === false) {
+		if (stripos($text, '<hide') === false)
+		{
 			return;
 		}
 
 		$blocks = $this->parser->parse_blocks($row['post_text']);
 
-		if (empty($blocks)) {
+		if (empty($blocks))
+		{
 			$post_row['MESSAGE'] = preg_replace(
-				'/<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>/is',
+				'/<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>/is',
 				'<div class="advancedhide-box hide-locked"><div class="hide-header"><i class="fa fa-lock"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_LOCKED'), ENT_QUOTES, 'UTF-8') . '</div></div>',
 				$text
 			);
@@ -148,21 +169,26 @@ class main_listener implements EventSubscriberInterface
 		$form_token = sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_unlock' . $token_sid);
 
 		$idx = 0;
-		$processed = preg_replace_callback('/<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now) {
+		$processed = preg_replace_callback('/<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now) {
 			$idx++;
 
-			if (!isset($blocks[$idx - 1])) {
+			if (!isset($blocks[$idx - 1]))
+			{
 				return '<div class="advancedhide-box hide-locked"><div class="hide-header"><i class="fa fa-exclamation-triangle"></i> ' . htmlspecialchars($this->language->lang('HIDE_LIMIT_EXCEEDED'), ENT_QUOTES, 'UTF-8') . '</div></div>';
 			}
 
 			$block = $blocks[$idx - 1];
 			$eval = $this->auth_service->evaluate_block($block, $context);
 
-			if ($eval['can_view']) {
+			if ($eval['can_view'])
+			{
 				$badge = '';
-				if ($eval['override'] === 'mod') {
+				if ($eval['override'] === 'mod')
+				{
 					$badge = '<span class="hide-override-badge mod">' . htmlspecialchars($this->language->lang('HIDE_OVERRIDE_MOD'), ENT_QUOTES, 'UTF-8') . '</span>';
-				} elseif ($eval['override'] === 'author') {
+				}
+				elseif ($eval['override'] === 'author')
+				{
 					$badge = '<span class="hide-override-badge author">' . htmlspecialchars($this->language->lang('HIDE_OVERRIDE_AUTHOR'), ENT_QUOTES, 'UTF-8') . '</span>';
 				}
 
@@ -173,16 +199,19 @@ class main_listener implements EventSubscriberInterface
 			}
 
 			$reasons_html = '';
-			if (!empty($eval['failed_conditions'])) {
+			if (!empty($eval['failed_conditions']))
+			{
 				$reasons_html = '<ul class="hide-reasons">';
-				foreach ($eval['failed_conditions'] as $fc) {
+				foreach ($eval['failed_conditions'] as $fc)
+				{
 					$reasons_html .= '<li>' . htmlspecialchars($fc, ENT_QUOTES, 'UTF-8') . '</li>';
 				}
 				$reasons_html .= '</ul>';
 			}
 
 			$pass_form = '';
-			if ($block->has_password) {
+			if ($block->has_password)
+			{
 				$pass_form = '<div class="hide-pass-form" data-postid="' . $context['post_id'] . '" data-blockid="' . $block->block_index . '">' .
 					'<input type="hidden" class="hide-token" name="form_token" value="' . htmlspecialchars($form_token, ENT_QUOTES, 'UTF-8') . '" />' .
 					'<input type="hidden" class="hide-creation-time" name="creation_time" value="' . (int)$now . '" />' .
@@ -205,43 +234,87 @@ class main_listener implements EventSubscriberInterface
 	public function protect_quote_and_preview($event)
 	{
 		$mode = isset($event['mode']) ? (string)$event['mode'] : '';
-		if ($mode !== 'quote') {
-			return;
-		}
-
 		$page_data = $event['page_data'];
-		if (empty($page_data['MESSAGE'])) {
-			return;
+
+		// 1. Режим цитирования чужого поста: заменяем закрытые блоки на заглушку
+		if ($mode === 'quote' && !empty($page_data['MESSAGE']))
+		{
+			$post_data = isset($event['post_data']) && is_array($event['post_data']) ? $event['post_data'] : [];
+			$poster_id = (int)($post_data['poster_id'] ?? 0);
+			$viewer_id = (int)$this->user->data['user_id'];
+
+			if ($poster_id !== $viewer_id)
+			{
+				$page_data['MESSAGE'] = preg_replace(
+					'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>)/is',
+					'[hide]' . $this->language->lang('HIDE_CONTENT_PROTECTED') . '[/hide]',
+					$page_data['MESSAGE']
+				);
+				$event['page_data'] = $page_data;
+			}
 		}
 
-		$has_tags = (strpos($page_data['MESSAGE'], '[hide') !== false || strpos($page_data['MESSAGE'], '<HIDE') !== false);
-		if (!$has_tags) {
-			return;
-		}
+		// 2. Режим предпросмотра: обрабатываем область PREVIEW_MESSAGE, не трогая textarea MESSAGE
+		if (!empty($event['preview']) && !empty($page_data['PREVIEW_MESSAGE']))
+		{
+			$preview_text = $page_data['PREVIEW_MESSAGE'];
+			if (stripos($preview_text, '<hide') !== false)
+			{
+				$blocks = $this->parser->parse_blocks($preview_text);
+				$context = [
+					'forum_id'  => (int)($event['forum_id'] ?? 0),
+					'topic_id'  => (int)($event['topic_id'] ?? 0),
+					'post_id'   => 0,
+					'poster_id' => (int)$this->user->data['user_id'],
+				];
 
-		$post_data = isset($event['post_data']) && is_array($event['post_data']) ? $event['post_data'] : [];
-		$poster_id = (int)($post_data['poster_id'] ?? 0);
-		$viewer_id = (int)$this->user->data['user_id'];
+				$idx = 0;
+				$page_data['PREVIEW_MESSAGE'] = preg_replace_callback(
+					'/<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>/is',
+					function($m) use ($context, $blocks, &$idx) {
+						$idx++;
+						if (!isset($blocks[$idx - 1]))
+						{
+							return '<div class="advancedhide-box hide-locked"><div class="hide-header"><i class="fa fa-lock"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_LOCKED'), ENT_QUOTES, 'UTF-8') . '</div></div>';
+						}
 
-		if ($poster_id !== $viewer_id) {
-			$page_data['MESSAGE'] = preg_replace(
-				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>)/is',
-				'[hide]' . $this->language->lang('HIDE_CONTENT_PROTECTED') . '[/hide]',
-				$page_data['MESSAGE']
-			);
-			$event['page_data'] = $page_data;
+						$eval = $this->auth_service->evaluate_block($blocks[$idx - 1], $context);
+						if ($eval['can_view'])
+						{
+							return '<div class="advancedhide-box hide-unlocked"><div class="hide-header"><i class="fa fa-unlock-alt"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_UNLOCKED'), ENT_QUOTES, 'UTF-8') . '</div><div class="hide-content">' . $m[2] . '</div></div>';
+						}
+
+						$reasons_html = '';
+						if (!empty($eval['failed_conditions']))
+						{
+							$reasons_html = '<ul class="hide-reasons">';
+							foreach ($eval['failed_conditions'] as $fc)
+							{
+								$reasons_html .= '<li>' . htmlspecialchars($fc, ENT_QUOTES, 'UTF-8') . '</li>';
+							}
+							$reasons_html .= '</ul>';
+						}
+
+						return '<div class="advancedhide-box hide-locked"><div class="hide-header"><i class="fa fa-lock"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_LOCKED'), ENT_QUOTES, 'UTF-8') . '</div><div class="hide-body">' . $reasons_html . '</div></div>';
+					},
+					$preview_text
+				);
+				$event['page_data'] = $page_data;
+			}
 		}
 	}
 
 	public function protect_search($event)
 	{
 		$row = $event['row'];
-		if (empty($row['post_text'])) {
+		if (empty($row['post_text']))
+		{
 			return;
 		}
 
-		$has_tags = (strpos($row['post_text'], '[hide') !== false || strpos($row['post_text'], '<HIDE') !== false);
-		if (!$has_tags) {
+		$raw_text = $row['post_text'];
+		if (stripos($raw_text, '[hide') === false && stripos($raw_text, '<hide') === false)
+		{
 			return;
 		}
 
@@ -252,12 +325,13 @@ class main_listener implements EventSubscriberInterface
 			'poster_id' => (int)($row['poster_id'] ?? 0),
 		];
 
-		$blocks = $this->parser->parse_blocks($row['post_text']);
-		if (empty($blocks)) {
+		$blocks = $this->parser->parse_blocks($raw_text);
+		if (empty($blocks))
+		{
 			$row['post_text'] = preg_replace(
-				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>)/is',
+				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>)/is',
 				htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8'),
-				$row['post_text']
+				$raw_text
 			);
 			$event['row'] = $row;
 			return;
@@ -265,21 +339,23 @@ class main_listener implements EventSubscriberInterface
 
 		$idx = 0;
 		$row['post_text'] = preg_replace_callback(
-			'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>)/is',
+			'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>)/is',
 			function ($m) use ($context, $blocks, &$idx) {
 				$idx++;
-				if (!isset($blocks[$idx - 1])) {
+				if (!isset($blocks[$idx - 1]))
+				{
 					return htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8');
 				}
 
 				$eval = $this->auth_service->evaluate_block($blocks[$idx - 1], $context);
-				if (!$eval['can_view']) {
+				if (!$eval['can_view'])
+				{
 					return htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8');
 				}
 
 				return isset($m[2]) && $m[2] !== '' ? $m[2] : ($m[4] ?? '');
 			},
-			$row['post_text']
+			$raw_text
 		);
 
 		$event['row'] = $row;
@@ -291,13 +367,14 @@ class main_listener implements EventSubscriberInterface
 		$row = $event['row'];
 
 		$text_key = $feed->get('text');
-		if ($text_key === null || empty($row[$text_key]) || empty($row['post_id'])) {
+		if ($text_key === null || empty($row[$text_key]) || empty($row['post_id']))
+		{
 			return;
 		}
 
 		$raw_text = $row[$text_key];
-		$has_tags = (strpos($raw_text, '[hide') !== false || strpos($raw_text, '<HIDE') !== false);
-		if (!$has_tags) {
+		if (stripos($raw_text, '[hide') === false && stripos($raw_text, '<hide') === false)
+		{
 			return;
 		}
 
@@ -309,9 +386,10 @@ class main_listener implements EventSubscriberInterface
 		];
 
 		$blocks = $this->parser->parse_blocks($raw_text);
-		if (empty($blocks)) {
+		if (empty($blocks))
+		{
 			$row[$text_key] = preg_replace(
-				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>)/is',
+				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>)/is',
 				htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8'),
 				$raw_text
 			);
@@ -321,15 +399,17 @@ class main_listener implements EventSubscriberInterface
 
 		$idx = 0;
 		$row[$text_key] = preg_replace_callback(
-			'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>)/is',
+			'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>)/is',
 			function ($m) use ($context, $blocks, &$idx) {
 				$idx++;
-				if (!isset($blocks[$idx - 1])) {
+				if (!isset($blocks[$idx - 1]))
+				{
 					return htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8');
 				}
 
 				$eval = $this->auth_service->evaluate_block($blocks[$idx - 1], $context);
-				if (!$eval['can_view']) {
+				if (!$eval['can_view'])
+				{
 					return htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8');
 				}
 

@@ -27,6 +27,7 @@ class auth_service
 
 	protected static $thanks_table_exists = null;
 	protected static $user_groups_cache = [];
+	protected static $schema_checked = false;
 
 	public function __construct(config $config, user $user, auth $auth, driver_interface $db, tools_interface $db_tools, language $language, cache_interface $cache, $table_prefix)
 	{
@@ -40,12 +41,33 @@ class auth_service
 		$this->table_prefix = $table_prefix;
 	}
 
+	protected function ensure_schema()
+	{
+		if (self::$schema_checked)
+		{
+			return;
+		}
+		self::$schema_checked = true;
+
+		$table = $this->table_prefix . 'advancedhide_rl';
+		try
+		{
+			// Автоматический апгрейд типа mediumint -> int(11) unsigned
+			$this->db_tools->sql_column_change($table, 'rl_window', ['UINT:11', 0]);
+		}
+		catch (\Exception $e)
+		{
+			// Колонка уже обновлена
+		}
+	}
+
 	public function is_block_unlocked($post_id, hide_block $block)
 	{
 		$cache_key = '_advhide_unlock_' . $this->user->data['session_id'];
 		$unlocked = $this->cache->get($cache_key) ?: [];
 
-		if (empty($unlocked[$post_id][$block->block_index])) {
+		if (empty($unlocked[$post_id][$block->block_index]))
+		{
 			return false;
 		}
 
@@ -72,16 +94,19 @@ class auth_service
 		$ident_prefix = substr($identity, 0, 62);
 
 		$minute_ok = $this->rl_consume('m_' . $ident_prefix, $minute_window, self::RL_MINUTE_LIMIT);
-		if (!$minute_ok) {
+		if (!$minute_ok)
+		{
 			return false;
 		}
 
 		$day_ok = $this->rl_consume('d_' . $ident_prefix, $day_window, self::RL_DAY_LIMIT);
-		if (!$day_ok) {
+		if (!$day_ok)
+		{
 			return false;
 		}
 
-		if (mt_rand(1, 200) === 1) {
+		if (mt_rand(1, 200) === 1)
+		{
 			$this->rl_gc($minute_window, $day_window);
 		}
 
@@ -90,6 +115,8 @@ class auth_service
 
 	protected function rl_consume($key, $window, $limit)
 	{
+		$this->ensure_schema();
+
 		$table = $this->table_prefix . 'advancedhide_rl';
 		$safe_key = $this->db->sql_escape($key);
 
@@ -99,7 +126,8 @@ class auth_service
 			' AND rl_window = ' . (int) $window .
 			' AND rl_count < ' . (int) $limit;
 		$this->db->sql_query($sql);
-		if ($this->db->sql_affectedrows() > 0) {
+		if ($this->db->sql_affectedrows() > 0)
+		{
 			return true;
 		}
 
@@ -107,7 +135,8 @@ class auth_service
 		$sql = 'INSERT INTO ' . $table . ' (rl_key, rl_window, rl_count) VALUES (\'' . $safe_key . '\', ' . (int) $window . ', 1)';
 		$inserted = $this->db->sql_query($sql);
 		$this->db->sql_return_on_error(false);
-		if ($inserted) {
+		if ($inserted)
+		{
 			return true;
 		}
 
@@ -139,11 +168,13 @@ class auth_service
 		$is_registered = ($this->user->data['is_registered'] && !$this->user->data['is_bot']);
 
 		$mod_override = $forum_id > 0 ? (bool)$this->auth->acl_get('m_hide_override', $forum_id) : (bool)$this->auth->acl_get('m_hide_override');
-		if ($mod_override) {
+		if ($mod_override)
+		{
 			return ['can_view' => true, 'failed_conditions' => [], 'override' => 'mod'];
 		}
 
-		if ($this->config['advancedhide_author_override'] && $poster_id > 0 && $viewer_id === $poster_id && $is_registered) {
+		if ($this->config['advancedhide_author_override'] && $poster_id > 0 && $viewer_id === $poster_id && $is_registered)
+		{
 			return ['can_view' => true, 'failed_conditions' => [], 'override' => 'author'];
 		}
 
@@ -151,20 +182,24 @@ class auth_service
 		$failed_conditions = [];
 		$now = time();
 
-		foreach ($block->normalized_conditions as $cond) {
+		foreach ($block->normalized_conditions as $cond)
+		{
 			$type = $cond['type'];
 			$args = $cond['args'];
 
-			switch ($type) {
+			switch ($type)
+			{
 				case 'guest':
-					if (!$is_registered) {
+					if (!$is_registered)
+					{
 						$can_view = false;
 						$failed_conditions[] = $this->language->lang('HIDE_COND_GUEST_FAILED');
 					}
 					break;
 				case 'posts':
 					$req = (int)($args[0] ?? 0);
-					if (!$is_registered || (int)$this->user->data['user_posts'] < $req) {
+					if (!$is_registered || (int)$this->user->data['user_posts'] < $req)
+					{
 						$can_view = false;
 						$failed_conditions[] = $this->language->lang('HIDE_COND_POSTS_FAILED', $req, (int)$this->user->data['user_posts']);
 					}
@@ -172,14 +207,16 @@ class auth_service
 				case 'days':
 					$req = (int)($args[0] ?? 0);
 					$user_days = floor(($now - (int)$this->user->data['user_regdate']) / 86400);
-					if (!$is_registered || $user_days < $req) {
+					if (!$is_registered || $user_days < $req)
+					{
 						$can_view = false;
 						$failed_conditions[] = $this->language->lang('HIDE_COND_DAYS_FAILED', $req, max(0, $user_days));
 					}
 					break;
 				case 'regdate':
 					$target_ts = strtotime(($args[0] ?? '') . ' 23:59:59 UTC');
-					if (!$is_registered || $target_ts === false || (int)$this->user->data['user_regdate'] > $target_ts) {
+					if (!$is_registered || $target_ts === false || (int)$this->user->data['user_regdate'] > $target_ts)
+					{
 						$can_view = false;
 						$failed_conditions[] = $this->language->lang('HIDE_COND_REGDATE_FAILED', $args[0] ?? '');
 					}
@@ -187,39 +224,45 @@ class auth_service
 				case 'time':
 					$time_arg = implode(',', $args);
 					$target_ts = is_numeric($time_arg) ? (int)$time_arg : strtotime($time_arg . ' UTC');
-					if ($target_ts === false || $now < $target_ts) {
+					if ($target_ts === false || $now < $target_ts)
+					{
 						$can_view = false;
 						$failed_conditions[] = $this->language->lang('HIDE_COND_TIME_FAILED', date('Y-m-d H:i:s UTC', $target_ts ?: 0));
 					}
 					break;
 				case 'reply':
-					if (!$is_registered || !$this->check_replied($topic_id, $viewer_id)) {
+					if (!$is_registered || !$this->check_replied($topic_id, $viewer_id))
+					{
 						$can_view = false;
 						$failed_conditions[] = $this->language->lang('HIDE_COND_REPLY_FAILED');
 					}
 					break;
 				case 'thanks':
-					if (!$is_registered || !$this->check_thanked($post_id, $viewer_id)) {
+					if (!$is_registered || !$this->check_thanked($post_id, $viewer_id))
+					{
 						$can_view = false;
 						$failed_conditions[] = $this->language->lang('HIDE_COND_THANKS_FAILED');
 					}
 					break;
 				case 'groups':
 					$gids = array_map('intval', $args);
-					if (!$is_registered || !$this->check_groups($viewer_id, $gids)) {
+					if (!$is_registered || !$this->check_groups($viewer_id, $gids))
+					{
 						$can_view = false;
 						$failed_conditions[] = $this->language->lang('HIDE_COND_GROUPS_FAILED');
 					}
 					break;
 				case 'users':
 					$uids = array_map('intval', $args);
-					if (!$is_registered || !in_array($viewer_id, $uids, true)) {
+					if (!$is_registered || !in_array($viewer_id, $uids, true))
+					{
 						$can_view = false;
 						$failed_conditions[] = $this->language->lang('HIDE_COND_USERS_FAILED');
 					}
 					break;
 				case 'pass':
-					if (!$password_verified && !$this->is_block_unlocked($post_id, $block)) {
+					if (!$password_verified && !$this->is_block_unlocked($post_id, $block))
+					{
 						$can_view = false;
 						$failed_conditions[] = $this->language->lang('HIDE_COND_PASS_REQUIRED');
 					}
@@ -244,7 +287,10 @@ class auth_service
 
 	protected function check_replied($topic_id, $user_id)
 	{
-		if ($topic_id <= 0 || $user_id <= 0) return false;
+		if ($topic_id <= 0 || $user_id <= 0)
+		{
+			return false;
+		}
 		$sql = 'SELECT 1 FROM ' . POSTS_TABLE . ' WHERE topic_id = ' . (int)$topic_id . ' AND poster_id = ' . (int)$user_id . ' AND post_visibility = 1';
 		$res = $this->db->sql_query_limit($sql, 1);
 		$row = $this->db->sql_fetchrow($res);
@@ -254,38 +300,52 @@ class auth_service
 
 	protected function check_thanked($post_id, $user_id)
 	{
-		if ($post_id <= 0 || $user_id <= 0) return false;
+		if ($post_id <= 0 || $user_id <= 0)
+		{
+			return false;
+		}
 
 		$tbl_cfg = $this->config['advancedhide_thanks_table'];
 		$tbl = !empty($tbl_cfg) ? $tbl_cfg : ($this->table_prefix . 'thanks');
-		if (!preg_match('/^[a-zA-Z0-9_]+$/', $tbl)) {
+		if (!preg_match('/^[a-zA-Z0-9_]+$/', $tbl))
+		{
 			$tbl = $this->table_prefix . 'thanks';
 		}
 
-		if (self::$thanks_table_exists === null) {
+		if (self::$thanks_table_exists === null)
+		{
 			self::$thanks_table_exists = $this->db_tools->sql_table_exists($tbl);
 		}
 
-		if (!self::$thanks_table_exists) {
+		if (!self::$thanks_table_exists)
+		{
 			return false;
 		}
 
 		$sql = 'SELECT 1 FROM ' . $tbl . ' WHERE post_id = ' . (int)$post_id . ' AND user_id = ' . (int)$user_id;
 		$res = $this->db->sql_query_limit($sql, 1);
 		$row = $res ? $this->db->sql_fetchrow($res) : false;
-		if ($res) $this->db->sql_freeresult($res);
+		if ($res)
+		{
+			$this->db->sql_freeresult($res);
+		}
 		return !empty($row);
 	}
 
 	protected function check_groups($user_id, array $gids)
 	{
-		if ($user_id <= 0) return false;
+		if ($user_id <= 0)
+		{
+			return false;
+		}
 
-		if (!isset(self::$user_groups_cache[$user_id])) {
+		if (!isset(self::$user_groups_cache[$user_id]))
+		{
 			$user_gids = [(int)$this->user->data['group_id']];
 			$sql = 'SELECT group_id FROM ' . USER_GROUP_TABLE . ' WHERE user_id = ' . (int)$user_id . ' AND user_pending = 0';
 			$res = $this->db->sql_query($sql);
-			while ($row = $this->db->sql_fetchrow($res)) {
+			while ($row = $this->db->sql_fetchrow($res))
+			{
 				$user_gids[] = (int)$row['group_id'];
 			}
 			$this->db->sql_freeresult($res);

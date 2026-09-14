@@ -20,7 +20,7 @@ class v100_initial extends \phpbb\db\migration\migration
 				$this->table_prefix . 'advancedhide_rl' => [
 					'COLUMNS' => [
 						'rl_key'    => ['VCHAR:64', ''],
-						'rl_window' => ['UINT', 0],
+						'rl_window' => ['UINT:11', 0],
 						'rl_count'  => ['UINT', 0],
 					],
 					'PRIMARY_KEY' => ['rl_key', 'rl_window'],
@@ -43,6 +43,19 @@ class v100_initial extends \phpbb\db\migration\migration
 			['config.add', ['advancedhide_thanks_table', '']],
 			['config.add', ['advancedhide_max_blocks', 20]],
 			['permission.add', ['m_hide_override', false]],
+			['module.add', [
+				'acp',
+				'ACP_CAT_DOT_MODS',
+				'ACP_ADVANCEDHIDE_TITLE'
+			]],
+			['module.add', [
+				'acp',
+				'ACP_ADVANCEDHIDE_TITLE',
+				[
+					'module_basename' => '\vendor\advancedhide\acp\main_module',
+					'modes'           => ['settings'],
+				]
+			]],
 		];
 	}
 }

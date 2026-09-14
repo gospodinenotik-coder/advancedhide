@@ -36,16 +36,19 @@ class hide_block
 	protected function parse_conditions()
 	{
 		$raw_conds = ($this->cond_str === '' || strtolower($this->cond_str) === 'guest') ? ['guest'] : explode(';', $this->cond_str);
-		if (count($raw_conds) > 5) {
+		if (count($raw_conds) > 5)
+		{
 			$raw_conds = array_slice($raw_conds, 0, 5);
 		}
 
-		foreach ($raw_conds as $rc) {
+		foreach ($raw_conds as $rc)
+		{
 			$sub = explode(',', trim($rc));
 			$type = strtolower(trim($sub[0] ?? ''));
 			$args = array_map('trim', array_slice($sub, 1));
 
-			if ($type === 'pass') {
+			if ($type === 'pass')
+			{
 				$this->has_password = true;
 				$this->password_hash = implode(',', $args);
 			}
@@ -73,46 +76,59 @@ class block_parser
 
 	public function parse_blocks($text)
 	{
-		if (empty($text) || strlen($text) > 500000) {
+		if (empty($text) || strlen($text) > 500000)
+		{
 			return [];
 		}
 
-		$is_xml    = (strpos($text, '<HIDE') !== false);
-		$is_bbcode = (strpos($text, '[hide') !== false);
+		$is_xml    = (stripos($text, '<hide') !== false);
+		$is_bbcode = (stripos($text, '[hide') !== false);
 
-		if (!$is_xml && !$is_bbcode) {
+		if (!$is_xml && !$is_bbcode)
+		{
 			return [];
 		}
 
 		$max_blocks = (int)($this->config['advancedhide_max_blocks'] ?: 20);
-		$opener_count = substr_count($text, '[hide') + substr_count($text, '<HIDE');
-		if ($opener_count > $max_blocks * 3) {
+		$lower_text = strtolower($text);
+		$opener_count = substr_count($lower_text, '[hide') + substr_count($lower_text, '<hide');
+		if ($opener_count > $max_blocks * 3)
+		{
 			return [];
 		}
 
-		if ($is_xml) {
-			$pattern = '/<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>/is';
-		} else {
+		if ($is_xml)
+		{
+			$pattern = '/<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>/is';
+		}
+		else
+		{
 			$pattern = '/\[hide(=[^\]]*)?\](.*?)\[\/hide\]/is';
 		}
 
 		$ok = preg_match_all($pattern, $text, $matches, PREG_SET_ORDER);
-		if ($ok === false || $ok === 0) {
+		if ($ok === false || $ok === 0)
+		{
 			return [];
 		}
 
 		$blocks = [];
 		$counter = 0;
-		foreach ($matches as $m) {
+		foreach ($matches as $m)
+		{
 			$counter++;
-			if ($counter > $max_blocks) {
+			if ($counter > $max_blocks)
+			{
 				break;
 			}
 
-			if ($is_xml) {
+			if ($is_xml)
+			{
 				$cond_str = $m[1] ?? '';
 				$content  = $m[2] ?? '';
-			} else {
+			}
+			else
+			{
 				$cond_str = isset($m[1]) ? ltrim($m[1], '=') : '';
 				$content  = $m[2] ?? '';
 			}
@@ -123,81 +139,125 @@ class block_parser
 		return $blocks;
 	}
 
+	public function canonicalize_cond_string($cond_str)
+	{
+		$cond_str = substr(trim($cond_str), 0, 255);
+		if ($cond_str === '' || strtolower($cond_str) === 'guest')
+		{
+			return 'guest';
+		}
+
+		$parts = explode(';', $cond_str);
+		if (count($parts) > 5)
+		{
+			$parts = array_slice($parts, 0, 5);
+		}
+
+		$new_parts = [];
+		$pass_counter = 0;
+
+		foreach ($parts as $part)
+		{
+			$sub = explode(',', trim($part));
+			$type = strtolower(trim($sub[0] ?? ''));
+
+			if ($type === 'users' && count($sub) > 1)
+			{
+				$uids = [];
+				$usernames = [];
+				foreach (array_slice($sub, 1) as $u)
+				{
+					$u = trim($u);
+					if (is_numeric($u) && (int)$u > 0)
+					{
+						$uids[] = (int)$u;
+					}
+					elseif ($u !== '')
+					{
+						$usernames[] = $u;
+					}
+				}
+
+				if (!empty($usernames))
+				{
+					if (!function_exists('user_get_id_name'))
+					{
+						include_once($this->phpbb_root_path . 'includes/functions_user.' . $this->php_ext);
+					}
+					$found_uids = [];
+					user_get_id_name($found_uids, $usernames);
+					if (!empty($found_uids))
+					{
+						foreach (array_keys($found_uids) as $uid)
+						{
+							$uids[] = (int)$uid;
+						}
+					}
+				}
+				$uids = array_unique(array_filter($uids));
+				$new_parts[] = 'users,' . (!empty($uids) ? implode(',', $uids) : '0');
+			}
+			elseif ($type === 'pass')
+			{
+				$pass_counter++;
+				if ($pass_counter > 2)
+				{
+					$new_parts[] = 'pass_limit_exceeded';
+					continue;
+				}
+
+				$plain_pass = trim(implode(',', array_slice($sub, 1)));
+				if ($plain_pass === '')
+				{
+					$new_parts[] = 'pass,';
+					continue;
+				}
+
+				$info = password_get_info($plain_pass);
+				if ($info['algoName'] === 'unknown')
+				{
+					$hashed = password_hash($plain_pass, PASSWORD_DEFAULT);
+					$new_parts[] = 'pass,' . $hashed;
+				}
+				else
+				{
+					$new_parts[] = 'pass,' . $plain_pass;
+				}
+			}
+			else
+			{
+				$new_parts[] = trim($part);
+			}
+		}
+
+		return implode(';', $new_parts);
+	}
+
 	public function canonicalize_and_hash($text)
 	{
-		if (empty($text) || strlen($text) > 500000 || strpos($text, '[hide') === false) {
+		if (empty($text) || strlen($text) > 500000)
+		{
 			return $text;
 		}
 
-		$pass_counter = 0;
+		if (stripos($text, '[hide') === false && stripos($text, '<hide') === false)
+		{
+			return $text;
+		}
 
-		return preg_replace_callback('/\[hide(=[^\]]*)?\]/i', function($matches) use (&$pass_counter) {
+		// 1. Хэширование и разрешение ников в BBCode: [hide=...]
+		$text = preg_replace_callback('/\[hide(=[^\]]*)?\]/i', function($matches) {
 			$raw_param = isset($matches[1]) ? ltrim($matches[1], '=') : '';
-			$cond_str = substr(trim($raw_param), 0, 255);
-			if ($cond_str === '') {
-				return '[hide=guest]';
-			}
-
-			$parts = explode(';', $cond_str);
-			if (count($parts) > 5) {
-				$parts = array_slice($parts, 0, 5);
-			}
-
-			$new_parts = [];
-			foreach ($parts as $part) {
-				$sub = explode(',', trim($part));
-				$type = strtolower(trim($sub[0] ?? ''));
-
-				if ($type === 'users' && count($sub) > 1) {
-					$uids = [];
-					$usernames = [];
-					foreach (array_slice($sub, 1) as $u) {
-						$u = trim($u);
-						if (is_numeric($u) && (int)$u > 0) {
-							$uids[] = (int)$u;
-						} elseif ($u !== '') {
-							$usernames[] = $u;
-						}
-					}
-					if (!empty($usernames)) {
-						if (!function_exists('user_get_id_name')) {
-							include_once($this->phpbb_root_path . 'includes/functions_user.' . $this->php_ext);
-						}
-						$found_uids = [];
-						user_get_id_name($found_uids, $usernames);
-						if (!empty($found_uids)) {
-							foreach (array_keys($found_uids) as $uid) {
-								$uids[] = (int)$uid;
-							}
-						}
-					}
-					$uids = array_unique(array_filter($uids));
-					$new_parts[] = 'users,' . (!empty($uids) ? implode(',', $uids) : '0');
-				} elseif ($type === 'pass') {
-					$pass_counter++;
-					if ($pass_counter > 2) {
-						$new_parts[] = 'pass_limit_exceeded';
-						continue;
-					}
-
-					$plain_pass = trim(implode(',', array_slice($sub, 1)));
-					if ($plain_pass === '') {
-						$new_parts[] = 'pass,';
-						continue;
-					}
-
-					$info = password_get_info($plain_pass);
-					if ($info['algoName'] === 'unknown') {
-						$hashed = password_hash($plain_pass, PASSWORD_DEFAULT);
-						$new_parts[] = 'pass,' . $hashed;
-					} else {
-						$new_parts[] = 'pass,' . $plain_pass;
-					}
-				} else {
-					$new_parts[] = trim($part);
-				}
-			}
-			return '[hide=' . implode(';', $new_parts) . ']';
+			$new_cond_str = $this->canonicalize_cond_string($raw_param);
+			return '[hide=' . $new_cond_str . ']';
 		}, $text);
+
+		// 2. Хэширование и разрешение ников в s9e XML: <hide cond="...">
+		$text = preg_replace_callback('/(<hide\s+cond=")([^"]*)(")/i', function($matches) {
+			$new_cond_str = $this->canonicalize_cond_string($matches[2]);
+			return $matches[1] . $new_cond_str . $matches[3];
+		}, $text);
+
+		return $text;
 	}
 }
