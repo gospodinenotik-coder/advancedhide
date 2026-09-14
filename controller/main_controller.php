@@ -85,13 +85,19 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
 		}
 
-		if (!function_exists('check_forum_password'))
+		// Корректная проверка доступа к разделу, защищенному паролем phpBB
+		$sql_f = 'SELECT forum_password FROM ' . FORUMS_TABLE . ' WHERE forum_id = ' . (int)$forum_id;
+		$res_f = $this->db->sql_query($sql_f);
+		$forum_data = $this->db->sql_fetchrow($res_f);
+		$this->db->sql_freeresult($res_f);
+
+		if (!empty($forum_data['forum_password']))
 		{
-			include_once($this->phpbb_root_path . 'includes/functions_display.' . $this->php_ext);
-		}
-		if (!check_forum_password($forum_id))
-		{
-			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
+			$session_passwords = !empty($this->user->data['session_forum_passwords']) ? (array)@unserialize($this->user->data['session_forum_passwords']) : [];
+			if (empty($session_passwords[$forum_id]))
+			{
+				return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
+			}
 		}
 
 		$blocks = $this->parser->parse_blocks($post['post_text']);
@@ -142,7 +148,7 @@ class main_controller
 			$bbcode_options = ($post['enable_bbcode'] ? 1 : 0) | ($post['enable_smilies'] ? 2 : 0) | ($post['enable_magic_url'] ? 4 : 0);
 			$rendered_all = generate_text_for_display($post['post_text'], $post['bbcode_uid'], $post['bbcode_bitfield'], $bbcode_options);
 			$rendered_inner = '';
-			if (preg_match_all('/<hide\s+cond="([^"]*)"[^>]*>(.*?)<\/hide>/is', $rendered_all, $matches))
+			if (preg_match_all('/<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/hide>/is', $rendered_all, $matches))
 			{
 				$rendered_inner = $matches[2][$block_id - 1] ?? '';
 			}
