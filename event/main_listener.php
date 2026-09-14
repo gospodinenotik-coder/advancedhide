@@ -1,0 +1,343 @@
+<?php
+namespace vendor\advancedhide\event;
+
+if (!defined('IN_PHPBB'))
+{
+	exit;
+}
+
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use phpbb\config\config;
+use phpbb\user;
+use phpbb\auth\auth;
+use phpbb\template\template;
+use phpbb\request\request_interface;
+use phpbb\language\language;
+use phpbb\db\driver\driver_interface;
+use vendor\advancedhide\service\block_parser;
+use vendor\advancedhide\service\auth_service;
+use s9e\TextFormatter\Configurator\Items\AttributeFilters\RegexpFilter;
+
+class main_listener implements EventSubscriberInterface
+{
+	protected $config;
+	protected $user;
+	protected $auth;
+	protected $template;
+	protected $request;
+	protected $language;
+	protected $db;
+	protected $parser;
+	protected $auth_service;
+	protected $phpbb_root_path;
+	protected $php_ext;
+
+	public function __construct(config $config, user $user, auth $auth, template $template, request_interface $request, language $language, driver_interface $db, block_parser $parser, auth_service $auth_service, $phpbb_root_path, $php_ext)
+	{
+		$this->config = $config;
+		$this->user = $user;
+		$this->auth = $auth;
+		$this->template = $template;
+		$this->request = $request;
+		$this->language = $language;
+		$this->db = $db;
+		$this->parser = $parser;
+		$this->auth_service = $auth_service;
+		$this->phpbb_root_path = $phpbb_root_path;
+		$this->php_ext = $php_ext;
+	}
+
+	public static function getSubscribedEvents()
+	{
+		return [
+			'core.permissions'                          => 'register_permissions',
+			'core.text_formatter_s9e_configure_before' => 'configure_bbcode',
+			'core.modify_text_for_storage_before'       => 'canonicalize_on_storage',
+			'core.viewtopic_modify_post_row'            => 'process_post_hide',
+			'core.posting_modify_template_vars'         => 'protect_quote_and_preview',
+			'core.search_modify_post_row'               => 'protect_search',
+			'core.feed_modify_feed_row'                 => 'protect_feed',
+			'core.user_setup'                           => 'load_language',
+			'core.page_header'                          => 'assign_common_vars',
+		];
+	}
+
+	public function load_language($event)
+	{
+		$this->language->add_lang('common', 'vendor/advancedhide');
+	}
+
+	public function assign_common_vars($event)
+	{
+		$this->template->assign_vars([
+			'U_ADVANCEDHIDE_UNLOCK' => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/unlock'),
+		]);
+	}
+
+	public function register_permissions($event)
+	{
+		$permissions = $event['permissions'];
+		$permissions['m_hide_override'] = [
+			'lang' => 'ACL_M_HIDE_OVERRIDE',
+			'cat'  => 'misc'
+		];
+		$event['permissions'] = $permissions;
+	}
+
+	public function configure_bbcode($event)
+	{
+		$configurator = $event['configurator'];
+		if (isset($configurator->tags['HIDE'])) return;
+
+		$tag = $configurator->tags->add('HIDE');
+		$tag->attributes->add('cond')->defaultValue = 'guest';
+
+		$filter = new RegexpFilter('/^[a-zA-Z0-9_,;:\/\$\.\-\+ ]*$/D');
+		$tag->attributes['cond']->filterChain->append($filter);
+		$tag->nestingLimit = 1;
+
+		$tag->template = '<HIDE cond="{@cond}"><xsl:apply-templates/></HIDE>';
+
+		$bbcode = $configurator->BBCodes->addCustom(
+			'[hide={TEXT1?}]{TEXT2}[/hide]',
+			'<HIDE cond="{@cond}"><xsl:apply-templates/></HIDE>'
+		);
+		$bbcode->defaultAttribute = 'cond';
+	}
+
+	public function canonicalize_on_storage($event)
+	{
+		$text = $event['text'];
+		$canonical = $this->parser->canonicalize_and_hash($text);
+		if ($canonical !== $text) {
+			$event['text'] = $canonical;
+		}
+	}
+
+	public function process_post_hide($event)
+	{
+		$post_row = $event['post_row'];
+		$row      = $event['row'];
+		$text     = $post_row['MESSAGE'];
+
+		if (strpos($text, '<HIDE') === false) {
+			return;
+		}
+
+		$blocks = $this->parser->parse_blocks($row['post_text']);
+
+		if (empty($blocks)) {
+			$post_row['MESSAGE'] = preg_replace(
+				'/<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>/is',
+				'<div class="advancedhide-box hide-locked"><div class="hide-header"><i class="fa fa-lock"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_LOCKED'), ENT_QUOTES, 'UTF-8') . '</div></div>',
+				$text
+			);
+			$event['post_row'] = $post_row;
+			return;
+		}
+
+		$context = [
+			'forum_id'  => (int)$row['forum_id'],
+			'topic_id'  => (int)$row['topic_id'],
+			'post_id'   => (int)$row['post_id'],
+			'poster_id' => (int)$row['poster_id'],
+		];
+
+		$now = time();
+		$token_sid = ($this->user->data['user_id'] == ANONYMOUS && !empty($this->config['form_token_sid_guests'])) ? $this->user->session_id : '';
+		$form_token = sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_unlock' . $token_sid);
+
+		$idx = 0;
+		$processed = preg_replace_callback('/<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now) {
+			$idx++;
+
+			if (!isset($blocks[$idx - 1])) {
+				return '<div class="advancedhide-box hide-locked"><div class="hide-header"><i class="fa fa-exclamation-triangle"></i> ' . htmlspecialchars($this->language->lang('HIDE_LIMIT_EXCEEDED'), ENT_QUOTES, 'UTF-8') . '</div></div>';
+			}
+
+			$block = $blocks[$idx - 1];
+			$eval = $this->auth_service->evaluate_block($block, $context);
+
+			if ($eval['can_view']) {
+				$badge = '';
+				if ($eval['override'] === 'mod') {
+					$badge = '<span class="hide-override-badge mod">' . htmlspecialchars($this->language->lang('HIDE_OVERRIDE_MOD'), ENT_QUOTES, 'UTF-8') . '</span>';
+				} elseif ($eval['override'] === 'author') {
+					$badge = '<span class="hide-override-badge author">' . htmlspecialchars($this->language->lang('HIDE_OVERRIDE_AUTHOR'), ENT_QUOTES, 'UTF-8') . '</span>';
+				}
+
+				return '<div class="advancedhide-box hide-unlocked">' .
+					'<div class="hide-header"><i class="fa fa-unlock-alt"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_UNLOCKED'), ENT_QUOTES, 'UTF-8') . ' ' . $badge . '</div>' .
+					'<div class="hide-content">' . $m[2] . '</div>' .
+				'</div>';
+			}
+
+			$reasons_html = '';
+			if (!empty($eval['failed_conditions'])) {
+				$reasons_html = '<ul class="hide-reasons">';
+				foreach ($eval['failed_conditions'] as $fc) {
+					$reasons_html .= '<li>' . htmlspecialchars($fc, ENT_QUOTES, 'UTF-8') . '</li>';
+				}
+				$reasons_html .= '</ul>';
+			}
+
+			$pass_form = '';
+			if ($block->has_password) {
+				$pass_form = '<div class="hide-pass-form" data-postid="' . $context['post_id'] . '" data-blockid="' . $block->block_index . '">' .
+					'<input type="hidden" class="hide-token" name="form_token" value="' . htmlspecialchars($form_token, ENT_QUOTES, 'UTF-8') . '" />' .
+					'<input type="hidden" class="hide-creation-time" name="creation_time" value="' . (int)$now . '" />' .
+					'<input type="password" class="inputbox autowidth hide-pass-input" placeholder="' . htmlspecialchars($this->language->lang('HIDE_PASS_PLACEHOLDER'), ENT_QUOTES, 'UTF-8') . '" /> ' .
+					'<button type="button" class="button2 hide-pass-submit">' . htmlspecialchars($this->language->lang('HIDE_PASS_SUBMIT'), ENT_QUOTES, 'UTF-8') . '</button>' .
+					'<span class="hide-pass-msg"></span>' .
+				'</div>';
+			}
+
+			return '<div class="advancedhide-box hide-locked" id="hide-' . $context['post_id'] . '-' . $block->block_index . '">' .
+				'<div class="hide-header"><i class="fa fa-lock"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_LOCKED'), ENT_QUOTES, 'UTF-8') . '</div>' .
+				'<div class="hide-body">' . $reasons_html . $pass_form . '</div>' .
+			'</div>';
+		}, $text);
+
+		$post_row['MESSAGE'] = $processed;
+		$event['post_row'] = $post_row;
+	}
+
+	public function protect_quote_and_preview($event)
+	{
+		$mode = isset($event['mode']) ? (string)$event['mode'] : '';
+		if ($mode !== 'quote') {
+			return;
+		}
+
+		$page_data = $event['page_data'];
+		if (empty($page_data['MESSAGE'])) {
+			return;
+		}
+
+		$has_tags = (strpos($page_data['MESSAGE'], '[hide') !== false || strpos($page_data['MESSAGE'], '<HIDE') !== false);
+		if (!$has_tags) {
+			return;
+		}
+
+		$post_data = isset($event['post_data']) && is_array($event['post_data']) ? $event['post_data'] : [];
+		$poster_id = (int)($post_data['poster_id'] ?? 0);
+		$viewer_id = (int)$this->user->data['user_id'];
+
+		if ($poster_id !== $viewer_id) {
+			$page_data['MESSAGE'] = preg_replace(
+				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>)/is',
+				'[hide]' . $this->language->lang('HIDE_CONTENT_PROTECTED') . '[/hide]',
+				$page_data['MESSAGE']
+			);
+			$event['page_data'] = $page_data;
+		}
+	}
+
+	public function protect_search($event)
+	{
+		$row = $event['row'];
+		if (empty($row['post_text'])) {
+			return;
+		}
+
+		$has_tags = (strpos($row['post_text'], '[hide') !== false || strpos($row['post_text'], '<HIDE') !== false);
+		if (!$has_tags) {
+			return;
+		}
+
+		$context = [
+			'forum_id'  => (int)($row['forum_id'] ?? 0),
+			'topic_id'  => (int)($row['topic_id'] ?? 0),
+			'post_id'   => (int)($row['post_id'] ?? 0),
+			'poster_id' => (int)($row['poster_id'] ?? 0),
+		];
+
+		$blocks = $this->parser->parse_blocks($row['post_text']);
+		if (empty($blocks)) {
+			$row['post_text'] = preg_replace(
+				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>)/is',
+				htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8'),
+				$row['post_text']
+			);
+			$event['row'] = $row;
+			return;
+		}
+
+		$idx = 0;
+		$row['post_text'] = preg_replace_callback(
+			'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>)/is',
+			function ($m) use ($context, $blocks, &$idx) {
+				$idx++;
+				if (!isset($blocks[$idx - 1])) {
+					return htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8');
+				}
+
+				$eval = $this->auth_service->evaluate_block($blocks[$idx - 1], $context);
+				if (!$eval['can_view']) {
+					return htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8');
+				}
+
+				return isset($m[2]) && $m[2] !== '' ? $m[2] : ($m[4] ?? '');
+			},
+			$row['post_text']
+		);
+
+		$event['row'] = $row;
+	}
+
+	public function protect_feed($event)
+	{
+		$feed = $event['feed'];
+		$row = $event['row'];
+
+		$text_key = $feed->get('text');
+		if ($text_key === null || empty($row[$text_key]) || empty($row['post_id'])) {
+			return;
+		}
+
+		$raw_text = $row[$text_key];
+		$has_tags = (strpos($raw_text, '[hide') !== false || strpos($raw_text, '<HIDE') !== false);
+		if (!$has_tags) {
+			return;
+		}
+
+		$context = [
+			'forum_id'  => (int)($row['forum_id'] ?? 0),
+			'topic_id'  => (int)($row['topic_id'] ?? 0),
+			'post_id'   => (int)$row['post_id'],
+			'poster_id' => (int)($row['poster_id'] ?? 0),
+		];
+
+		$blocks = $this->parser->parse_blocks($raw_text);
+		if (empty($blocks)) {
+			$row[$text_key] = preg_replace(
+				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>)/is',
+				htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8'),
+				$raw_text
+			);
+			$event['row'] = $row;
+			return;
+		}
+
+		$idx = 0;
+		$row[$text_key] = preg_replace_callback(
+			'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<HIDE\s+cond="([^"]*)"[^>]*>(.*?)<\/HIDE>)/is',
+			function ($m) use ($context, $blocks, &$idx) {
+				$idx++;
+				if (!isset($blocks[$idx - 1])) {
+					return htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8');
+				}
+
+				$eval = $this->auth_service->evaluate_block($blocks[$idx - 1], $context);
+				if (!$eval['can_view']) {
+					return htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8');
+				}
+
+				return isset($m[2]) && $m[2] !== '' ? $m[2] : ($m[4] ?? '');
+			},
+			$raw_text
+		);
+
+		$event['row'] = $row;
+	}
+}

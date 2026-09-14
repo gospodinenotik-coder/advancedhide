@@ -1,0 +1,53 @@
+<script>
+(function($) {
+    'use strict';
+    $(document).on('click', '.hide-pass-submit', function(e) {
+        e.preventDefault();
+        var $btn   = $(this);
+        var $form  = $btn.closest('.hide-pass-form');
+        var $box   = $form.closest('.advancedhide-box');
+        var $msg   = $form.find('.hide-pass-msg');
+
+        var postId   = $form.data('postid');
+        var blockId  = $form.data('blockid');
+        var passVal  = $form.find('.hide-pass-input').val();
+
+        var formTok  = $form.find('.hide-token').val() || '';
+        var creatTime = $form.find('.hide-creation-time').val() || '';
+
+        if (!passVal) return;
+
+        $btn.prop('disabled', true);
+        $msg.text('');
+
+        $.ajax({
+            url: '{U_ADVANCEDHIDE_UNLOCK}',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                post_id: postId,
+                block_id: blockId,
+                password: passVal,
+                form_token: formTok,
+                creation_time: creatTime
+            },
+            success: function(res) {
+                if (res.success && res.html) {
+                    $box.replaceWith(res.html);
+                } else {
+                    $msg.text(res.message || 'Error');
+                    $btn.prop('disabled', false);
+                }
+            },
+            error: function(xhr) {
+                var err = 'Error';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    err = xhr.responseJSON.message;
+                }
+                $msg.text(err);
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+})(jQuery);
+</script>

@@ -1,0 +1,37 @@
+<!-- INCLUDE overall_header.html -->
+
+<h1>{L_ACP_ADVANCEDHIDE_TITLE}</h1>
+<p>{L_ACP_ADVANCEDHIDE_EXPLAIN}</p>
+
+<form id="acp_advancedhide" method="post" action="{U_ACTION}">
+	<fieldset>
+		<legend>{L_ACP_ADVANCEDHIDE_SETTINGS}</legend>
+
+		<dl>
+			<dt><label for="advancedhide_author_override">{L_ADVANCEDHIDE_AUTHOR_OVERRIDE}:</label><br /><span>{L_ADVANCEDHIDE_AUTHOR_OVERRIDE_EXPLAIN}</span></dt>
+			<dd>
+				<label><input type="radio" class="radio" name="advancedhide_author_override" value="1"<!-- IF AUTHOR_OVERRIDE --> checked="checked"<!-- ENDIF --> /> {L_YES}</label>
+				<label><input type="radio" class="radio" name="advancedhide_author_override" value="0"<!-- IF not AUTHOR_OVERRIDE --> checked="checked"<!-- ENDIF --> /> {L_NO}</label>
+			</dd>
+		</dl>
+
+		<dl>
+			<dt><label for="advancedhide_thanks_table">{L_ADVANCEDHIDE_THANKS_TABLE}:</label><br /><span>{L_ADVANCEDHIDE_THANKS_TABLE_EXPLAIN}</span></dt>
+			<dd><input type="text" id="advancedhide_thanks_table" name="advancedhide_thanks_table" value="{THANKS_TABLE}" size="30" /></dd>
+		</dl>
+
+		<dl>
+			<dt><label for="advancedhide_max_blocks">{L_ADVANCEDHIDE_MAX_BLOCKS}:</label><br /><span>{L_ADVANCEDHIDE_MAX_BLOCKS_EXPLAIN}</span></dt>
+			<dd><input type="number" id="advancedhide_max_blocks" name="advancedhide_max_blocks" value="{MAX_BLOCKS}" min="1" max="100" /></dd>
+		</dl>
+
+		<p class="submit-buttons">
+			<input class="button1" type="submit" id="submit" name="submit" value="{L_SUBMIT}" />&nbsp;
+			<input class="button2" type="reset" id="reset" name="reset" value="{L_RESET}" />
+		</p>
+
+		{S_FORM_TOKEN}
+	</fieldset>
+</form>
+
+<!-- INCLUDE overall_footer.html -->

@@ -1,0 +1,4 @@
+vendor_advancedhide_unlock:
+    path: /advancedhide/unlock
+    defaults: { _controller: vendor.advancedhide.controller:unlock }
+    methods: [POST]

@@ -1,0 +1,51 @@
+services:
+    vendor.advancedhide.parser:
+        class: vendor\advancedhide\service\block_parser
+        arguments:
+            - '@config'
+            - '%core.root_path%'
+            - '%core.php_ext%'
+
+    vendor.advancedhide.auth_service:
+        class: vendor\advancedhide\service\auth_service
+        arguments:
+            - '@config'
+            - '@user'
+            - '@auth'
+            - '@dbal.conn'
+            - '@dbal.tools'
+            - '@language'
+            - '@cache.driver'
+            - '%core.table_prefix%'
+
+    vendor.advancedhide.listener:
+        class: vendor\advancedhide\event\main_listener
+        arguments:
+            - '@config'
+            - '@user'
+            - '@auth'
+            - '@template'
+            - '@request'
+            - '@language'
+            - '@dbal.conn'
+            - '@vendor.advancedhide.parser'
+            - '@vendor.advancedhide.auth_service'
+            - '%core.root_path%'
+            - '%core.php_ext%'
+        tags:
+            - { name: event.listener }
+
+    vendor.advancedhide.controller:
+        class: vendor\advancedhide\controller\main_controller
+        arguments:
+            - '@config'
+            - '@user'
+            - '@auth'
+            - '@dbal.conn'
+            - '@request'
+            - '@language'
+            - '@cache.driver'
+            - '@vendor.advancedhide.parser'
+            - '@vendor.advancedhide.auth_service'
+            - '%core.root_path%'
+            - '%core.php_ext%'
