@@ -43,6 +43,8 @@ class v100_initial extends \phpbb\db\migration\migration
 			['config.add', ['advancedhide_thanks_table', '']],
 			['config.add', ['advancedhide_max_blocks', 20]],
 			['permission.add', ['m_hide_override', false]],
+			['permission.permission_set', ['ROLE_MOD_FULL', 'm_hide_override']],
+			['permission.permission_set', ['ROLE_ADMIN_FULL', 'm_hide_override']],
 			['module.add', [
 				'acp',
 				'ACP_CAT_DOT_MODS',

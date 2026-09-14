@@ -148,7 +148,7 @@ class main_controller
 			$bbcode_options = ($post['enable_bbcode'] ? 1 : 0) | ($post['enable_smilies'] ? 2 : 0) | ($post['enable_magic_url'] ? 4 : 0);
 			$rendered_all = generate_text_for_display($post['post_text'], $post['bbcode_uid'], $post['bbcode_bitfield'], $bbcode_options);
 			$rendered_inner = '';
-			if (preg_match_all('/<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/hide>/is', $rendered_all, $matches))
+			if (preg_match_all('/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is', $rendered_all, $matches))
 			{
 				$rendered_inner = $matches[2][$block_id - 1] ?? '';
 			}

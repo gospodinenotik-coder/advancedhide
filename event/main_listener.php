@@ -149,7 +149,7 @@ class main_listener implements EventSubscriberInterface
 		if (empty($blocks))
 		{
 			$post_row['MESSAGE'] = preg_replace(
-				'/<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/hide>/is',
+				'/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is',
 				'<div class="advancedhide-box hide-locked"><div class="hide-header"><i class="fa fa-lock"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_LOCKED'), ENT_QUOTES, 'UTF-8') . '</div></div>',
 				$text
 			);
@@ -161,7 +161,7 @@ class main_listener implements EventSubscriberInterface
 			'forum_id'  => (int)$row['forum_id'],
 			'topic_id'  => (int)$row['topic_id'],
 			'post_id'   => (int)$row['post_id'],
-			'poster_id' => (int)$row['poster_id'],
+			'poster_id' => (int)($event['poster_id'] ?? $row['user_id'] ?? $row['poster_id'] ?? 0),
 		];
 
 		$now = time();
@@ -169,7 +169,7 @@ class main_listener implements EventSubscriberInterface
 		$form_token = sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_unlock' . $token_sid);
 
 		$idx = 0;
-		$processed = preg_replace_callback('/<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/hide>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now) {
+		$processed = preg_replace_callback('/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now) {
 			$idx++;
 
 			if (!isset($blocks[$idx - 1]))
@@ -246,7 +246,7 @@ class main_listener implements EventSubscriberInterface
 			if ($poster_id !== $viewer_id)
 			{
 				$page_data['MESSAGE'] = preg_replace(
-					'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/hide>)/is',
+					'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>)/is',
 					'[hide]' . $this->language->lang('HIDE_CONTENT_PROTECTED') . '[/hide]',
 					$page_data['MESSAGE']
 				);
@@ -254,7 +254,7 @@ class main_listener implements EventSubscriberInterface
 			}
 		}
 
-		// 2. Режим предпросмотра: обрабатываем разметку в окне превью, не повреждая textarea автора
+		// 2. Режим предпросмотра: обрабатываем разметку в окне превью через Twig, не повреждая textarea автора
 		if (!empty($event['preview']))
 		{
 			$preview_text = '';
@@ -262,9 +262,9 @@ class main_listener implements EventSubscriberInterface
 			{
 				$preview_text = $page_data['PREVIEW_MESSAGE'];
 			}
-			elseif (isset($this->template->_tpldata['.'][0]['PREVIEW_MESSAGE']))
+			elseif (method_exists($this->template, 'retrieve_var'))
 			{
-				$preview_text = $this->template->_tpldata['.'][0]['PREVIEW_MESSAGE'];
+				$preview_text = (string)$this->template->retrieve_var('PREVIEW_MESSAGE');
 			}
 
 			if ($preview_text !== '' && stripos($preview_text, '<hide') !== false)
@@ -279,7 +279,7 @@ class main_listener implements EventSubscriberInterface
 
 				$idx = 0;
 				$processed_preview = preg_replace_callback(
-					'/<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/hide>/is',
+					'/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is',
 					function($m) use ($context, $blocks, &$idx) {
 						$idx++;
 						if (!isset($blocks[$idx - 1]))
@@ -341,7 +341,7 @@ class main_listener implements EventSubscriberInterface
 		if (empty($blocks))
 		{
 			$row['post_text'] = preg_replace(
-				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/hide>)/is',
+				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>)/is',
 				htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8'),
 				$raw_text
 			);
@@ -351,7 +351,7 @@ class main_listener implements EventSubscriberInterface
 
 		$idx = 0;
 		$row['post_text'] = preg_replace_callback(
-			'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/hide>)/is',
+			'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>)/is',
 			function ($m) use ($context, $blocks, &$idx) {
 				$idx++;
 				if (!isset($blocks[$idx - 1]))
@@ -401,7 +401,7 @@ class main_listener implements EventSubscriberInterface
 		if (empty($blocks))
 		{
 			$row[$text_key] = preg_replace(
-				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/hide>)/is',
+				'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>)/is',
 				htmlspecialchars($this->language->lang('HIDE_CONTENT_PROTECTED'), ENT_QUOTES, 'UTF-8'),
 				$raw_text
 			);
@@ -411,7 +411,7 @@ class main_listener implements EventSubscriberInterface
 
 		$idx = 0;
 		$row[$text_key] = preg_replace_callback(
-			'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/hide>)/is',
+			'/(?:\[hide(=[^\]]*)?\](.*?)\[\/hide\]|<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>)/is',
 			function ($m) use ($context, $blocks, &$idx) {
 				$idx++;
 				if (!isset($blocks[$idx - 1]))

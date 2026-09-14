@@ -97,10 +97,10 @@ class block_parser
 			return [];
 		}
 
-		// Корректно матчит как промежуточный XML из БД (<HIDE hide="...">), так и HTML-разметку (<hide cond="...">)
+		// Захватывает как теги с атрибутами (<HIDE hide="...">, <hide cond="...">), так и тег по умолчанию (<HIDE>)
 		if ($is_xml)
 		{
-			$pattern = '/<(?:hide)\s+[^>]*(?:cond|hide)="([^"]*)"[^>]*>(.*?)<\/(?:hide)>/is';
+			$pattern = '/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is';
 		}
 		else
 		{
@@ -125,7 +125,7 @@ class block_parser
 
 			if ($is_xml)
 			{
-				$cond_str = $m[1] ?? '';
+				$cond_str = !empty($m[1]) ? $m[1] : 'guest';
 				$content  = $m[2] ?? '';
 			}
 			else
@@ -189,7 +189,6 @@ class block_parser
 					user_get_id_name($found_uids, $usernames);
 					if (!empty($found_uids))
 					{
-						// user_get_id_name заполняет массив [0 => ID, 1 => ID]. Извлекаем сами ID.
 						foreach ($found_uids as $uid)
 						{
 							if ((int)$uid > 0)
