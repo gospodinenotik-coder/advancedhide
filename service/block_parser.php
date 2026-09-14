@@ -97,7 +97,6 @@ class block_parser
 			return [];
 		}
 
-		// Захватывает как теги с атрибутами (<HIDE hide="...">, <hide cond="...">), так и тег по умолчанию (<HIDE>)
 		if ($is_xml)
 		{
 			$pattern = '/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is';
@@ -140,7 +139,7 @@ class block_parser
 		return $blocks;
 	}
 
-	public function canonicalize_cond_string($cond_str, array &$pass_cache = [])
+	public function canonicalize_cond_string($cond_str, array &$pass_cache = [], &$total_pass_hashed = 0, $max_pass_hashes = 3)
 	{
 		$cond_str = substr(trim($cond_str), 0, 255);
 		if ($cond_str === '' || strtolower($cond_str) === 'guest')
@@ -204,7 +203,7 @@ class block_parser
 			elseif ($type === 'pass')
 			{
 				$pass_counter++;
-				if ($pass_counter > 2)
+				if ($pass_counter > 2 || $total_pass_hashed >= $max_pass_hashes)
 				{
 					$new_parts[] = 'pass_limit_exceeded';
 					continue;
@@ -226,6 +225,7 @@ class block_parser
 				$info = password_get_info($plain_pass);
 				if ($info['algoName'] === 'unknown')
 				{
+					$total_pass_hashed++;
 					$hashed = password_hash($plain_pass, PASSWORD_DEFAULT);
 					$pass_cache[$plain_pass] = $hashed;
 					$new_parts[] = 'pass,' . $hashed;
@@ -251,23 +251,33 @@ class block_parser
 			return $text;
 		}
 
-		if (stripos($text, '[hide') === false && stripos($text, '<hide') === false)
+		$lower_text = strtolower($text);
+		if (strpos($lower_text, '[hide') === false && strpos($lower_text, '<hide') === false)
+		{
+			return $text;
+		}
+
+		$max_blocks = (int)($this->config['advancedhide_max_blocks'] ?: 20);
+		$opener_count = substr_count($lower_text, '[hide') + substr_count($lower_text, '<hide');
+		if ($opener_count > $max_blocks * 3)
 		{
 			return $text;
 		}
 
 		$pass_cache = [];
+		$total_pass_hashed = 0;
+		$max_pass_hashes = 3;
 
-		// 1. Хэширование и разрешение ников в BBCode: [hide=...]
-		$text = preg_replace_callback('/\[hide(=[^\]]*)?\]/i', function($matches) use (&$pass_cache) {
+		// 1. Обработка BBCode: [hide=...]
+		$text = preg_replace_callback('/\[hide(=[^\]]*)?\]/i', function($matches) use (&$pass_cache, &$total_pass_hashed, $max_pass_hashes) {
 			$raw_param = isset($matches[1]) ? ltrim($matches[1], '=') : '';
-			$new_cond_str = $this->canonicalize_cond_string($raw_param, $pass_cache);
+			$new_cond_str = $this->canonicalize_cond_string($raw_param, $pass_cache, $total_pass_hashed, $max_pass_hashes);
 			return '[hide=' . $new_cond_str . ']';
 		}, $text);
 
-		// 2. Хэширование и разрешение ников в s9e XML: <HIDE hide="..."> и <hide cond="...">
-		$text = preg_replace_callback('/(<(?:hide)\s+[^>]*(?:cond|hide)=")([^"]*)(")/i', function($matches) use (&$pass_cache) {
-			$new_cond_str = $this->canonicalize_cond_string($matches[2], $pass_cache);
+		// 2. Обработка s9e XML: <HIDE hide="..."> и <hide cond="...">
+		$text = preg_replace_callback('/(<(?:hide)\s+[^>]*(?:cond|hide)=")([^"]*)(")/i', function($matches) use (&$pass_cache, &$total_pass_hashed, $max_pass_hashes) {
+			$new_cond_str = $this->canonicalize_cond_string($matches[2], $pass_cache, $total_pass_hashed, $max_pass_hashes);
 			return $matches[1] . $new_cond_str . $matches[3];
 		}, $text);
 

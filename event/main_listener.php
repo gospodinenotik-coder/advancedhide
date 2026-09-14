@@ -52,6 +52,7 @@ class main_listener implements EventSubscriberInterface
 		return [
 			'core.permissions'                          => 'register_permissions',
 			'core.text_formatter_s9e_configure_before' => 'configure_bbcode',
+			'core.posting_modify_submission_errors'     => 'validate_post_passwords',
 			'core.modify_text_for_storage_before'       => 'canonicalize_on_storage',
 			'core.modify_submit_post_data'              => 'canonicalize_on_submit',
 			'core.viewtopic_modify_post_row'            => 'process_post_hide',
@@ -116,6 +117,34 @@ class main_listener implements EventSubscriberInterface
 			'[hide={TEXT1?}]{TEXT2}[/hide]',
 			'<hide cond="{@hide}"><xsl:apply-templates/></hide>'
 		);
+	}
+
+	public function validate_post_passwords($event)
+	{
+		$post_data = $event['post_data'];
+		$message = !empty($post_data['message']) ? $post_data['message'] : $this->request->variable('message', '', true);
+
+		if (empty($message) || stripos($message, '[hide') === false)
+		{
+			return;
+		}
+
+		$blocks = $this->parser->parse_blocks($message);
+		$pass_count = 0;
+		foreach ($blocks as $b)
+		{
+			if ($b->has_password)
+			{
+				$pass_count++;
+			}
+		}
+
+		if ($pass_count > 3)
+		{
+			$error = $event['error'];
+			$error[] = $this->language->lang('HIDE_ERROR_TOO_MANY_PASSWORDS');
+			$event['error'] = $error;
+		}
 	}
 
 	public function canonicalize_on_storage($event)
@@ -208,7 +237,6 @@ class main_listener implements EventSubscriberInterface
 				'</div>';
 			}
 
-			// Если модуль отключен в ACP, показываем специальную заглушку
 			if (!empty($eval['has_disabled_module']))
 			{
 				$reasons_html = '<ul class="hide-reasons">';
@@ -266,7 +294,6 @@ class main_listener implements EventSubscriberInterface
 		$mode = isset($event['mode']) ? (string)$event['mode'] : '';
 		$page_data = $event['page_data'];
 
-		// 1. Режим цитирования: замена на заглушку
 		if ($mode === 'quote' && !empty($page_data['MESSAGE']))
 		{
 			$post_data = isset($event['post_data']) && is_array($event['post_data']) ? $event['post_data'] : [];
@@ -284,7 +311,6 @@ class main_listener implements EventSubscriberInterface
 			}
 		}
 
-		// 2. Режим предпросмотра: обработка PREVIEW_MESSAGE через Twig
 		if (!empty($event['preview']))
 		{
 			$preview_text = '';
@@ -363,7 +389,7 @@ class main_listener implements EventSubscriberInterface
 		$context = [
 			'forum_id'  => (int)($row['forum_id'] ?? 0),
 			'topic_id'  => (int)($row['topic_id'] ?? 0),
-			'post_id'   => (int)($row['post_id'] ?? 0),
+			'post_id'   => (int)$row['post_id'],
 			'poster_id' => (int)($row['poster_id'] ?? 0),
 		];
 

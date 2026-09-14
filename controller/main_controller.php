@@ -61,7 +61,6 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FORM_INVALID')], 403);
 		}
 
-		// Проверка: включен ли модуль парольной защиты в ACP
 		if (!$this->auth_service->is_module_enabled('pass'))
 		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_COND_MODULE_DISABLED', $this->auth_service->get_module_title('pass'))], 403);
@@ -94,7 +93,6 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
 		}
 
-		// Безопасная десериализация паролей раздела без разрешения классов (Hardening)
 		$sql_f = 'SELECT forum_password FROM ' . FORUMS_TABLE . ' WHERE forum_id = ' . (int)$forum_id;
 		$res_f = $this->db->sql_query($sql_f);
 		$forum_data = $this->db->sql_fetchrow($res_f);
@@ -123,44 +121,59 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 400);
 		}
 
-		// Rate Limiting (потребление лимита выполняется ДО валидации для пресечения брутфорса)
-		$identity = hash('sha256', $this->user->ip . '|' . (int) $this->user->data['user_id'] . '|' . $post_id . '|' . $block->block_hash);
-		if (!$this->auth_service->consume_rate_limit($identity))
+		// Идентичность пользователя не привязывается к сетевому IP
+		$user_id = (int)$this->user->data['user_id'];
+		$session_id = !empty($this->user->session_id) ? $this->user->session_id : $this->user->ip;
+		$user_token = ($user_id > 1) ? 'u_' . $user_id : 's_' . $session_id;
+		$user_identity = hash('sha256', $user_token . '|' . $post_id . '|' . $block->block_hash);
+		$user_ip = $this->user->ip;
+
+		$reservation = $this->auth_service->acquire_rate_limit($user_identity, $user_ip, $post_id, $block->block_hash);
+		if ($reservation === false)
 		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_RATE_LIMIT_EXCEEDED')], 429);
 		}
 
-		// Проверка встроенной Captcha phpBB (если включена в ACP)
+		// Валидация Captcha (Fail-Closed c возвратом зарезервированного слота при сбое сервиса)
 		if (!empty($this->config['advancedhide_enable_captcha']))
 		{
-			$plugin_name = $this->config['captcha_plugin'];
-			if (!empty($plugin_name))
+			$plugin_name = $this->config['captcha_plugin'] ?? '';
+			if (empty($plugin_name))
 			{
-				try
+				$this->auth_service->refund_rate_limit($reservation);
+				return new JsonResponse(['success' => false, 'message' => $this->language->lang('CAPTCHA_SERVICE_UNAVAILABLE')], 503);
+			}
+
+			try
+			{
+				$captcha = $this->captcha_factory->get_instance($plugin_name);
+				if (!$captcha->is_available())
 				{
-					$captcha = $this->captcha_factory->get_instance($plugin_name);
-					if ($captcha->is_available())
-					{
-						$captcha->init(CONFIRM_POST);
-						$vc_response = $captcha->validate();
-						if ($vc_response !== false)
-						{
-							$err_text = $this->language->is_set($vc_response) ? $this->language->lang($vc_response) : ($vc_response ?: $this->language->lang('CONFIRM_CODE_WRONG'));
-							return new JsonResponse([
-								'success'       => false,
-								'message'       => $err_text,
-								'captcha_error' => true,
-								'new_captcha'   => $this->auth_service->generate_captcha_html(),
-							], 400);
-						}
-					}
+					$this->auth_service->refund_rate_limit($reservation);
+					return new JsonResponse(['success' => false, 'message' => $this->language->lang('CAPTCHA_SERVICE_UNAVAILABLE')], 503);
 				}
-				catch (\Exception $e)
+
+				$captcha->init(CONFIRM_POST);
+				$vc_response = $captcha->validate();
+				if ($vc_response !== false)
 				{
+					$err_text = $this->language->is_set($vc_response) ? $this->language->lang($vc_response) : ($vc_response ?: $this->language->lang('CONFIRM_CODE_WRONG'));
+					return new JsonResponse([
+						'success'       => false,
+						'message'       => $err_text,
+						'captcha_error' => true,
+						'new_captcha'   => $this->auth_service->generate_captcha_html(),
+					], 400);
 				}
+			}
+			catch (\Exception $e)
+			{
+				$this->auth_service->refund_rate_limit($reservation);
+				return new JsonResponse(['success' => false, 'message' => $this->language->lang('CAPTCHA_SERVICE_UNAVAILABLE')], 503);
 			}
 		}
 
+		// Проверка пароля
 		if ($block->password_hash !== '' && password_verify($pass, $block->password_hash))
 		{
 			$context = [
@@ -175,12 +188,14 @@ class main_controller
 			$re_eval = $this->auth_service->evaluate_block($block, $context);
 			if (!$re_eval['can_view'])
 			{
+				$this->auth_service->refund_rate_limit($reservation);
 				return new JsonResponse([
 					'success' => false,
 					'message' => $this->language->lang('HIDE_PASS_OK_OTHER_FAILED_GENERIC')
 				], 403);
 			}
 
+			$this->auth_service->refund_rate_limit($reservation);
 			$this->auth_service->unlock_block($post_id, $block);
 
 			if (!function_exists('generate_text_for_display'))

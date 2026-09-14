@@ -31,7 +31,6 @@ class auth_service
 
 	protected static $thanks_table_exists = null;
 	protected static $user_groups_cache = [];
-	protected static $schema_checked = false;
 
 	public function __construct(config $config, user $user, auth $auth, driver_interface $db, tools_interface $db_tools, language $language, cache_interface $cache, $table_prefix, captcha_factory $captcha_factory, $phpbb_root_path, $php_ext)
 	{
@@ -71,10 +70,10 @@ class auth_service
 			return '';
 		}
 
-		$plugin_name = $this->config['captcha_plugin'];
+		$plugin_name = $this->config['captcha_plugin'] ?? '';
 		if (empty($plugin_name))
 		{
-			return '';
+			return '<div class="advhide-captcha-box advhide-captcha-error"><span class="error">' . htmlspecialchars($this->language->lang('CAPTCHA_SERVICE_UNAVAILABLE'), ENT_QUOTES, 'UTF-8') . '</span></div>';
 		}
 
 		try
@@ -82,12 +81,11 @@ class auth_service
 			$captcha = $this->captcha_factory->get_instance($plugin_name);
 			if (!$captcha->is_available())
 			{
-				return '';
+				return '<div class="advhide-captcha-box advhide-captcha-error"><span class="error">' . htmlspecialchars($this->language->lang('CAPTCHA_SERVICE_UNAVAILABLE'), ENT_QUOTES, 'UTF-8') . '</span></div>';
 			}
 
 			$captcha->init(CONFIRM_POST);
 
-			// 1. Q&A Captcha
 			if ($captcha instanceof \phpbb\captcha\plugins\qa)
 			{
 				$q_text = $captcha->question_text;
@@ -99,7 +97,6 @@ class auth_service
 				'</div>';
 			}
 
-			// 2. reCAPTCHA v2
 			if ($captcha instanceof \phpbb\captcha\plugins\recaptcha)
 			{
 				$sitekey = $this->config['recaptcha_sitekey'] ?? '';
@@ -109,18 +106,17 @@ class auth_service
 				'</div>';
 			}
 
-			// 3. reCAPTCHA v3
 			if ($captcha instanceof \phpbb\captcha\plugins\recaptcha_v3)
 			{
-				$sitekey = $this->config['recaptcha_v3_sitekey'] ?? '';
+				$sitekey = (string)($this->config['recaptcha_v3_sitekey'] ?? '');
+				$safe_js_sitekey = json_encode($sitekey, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 				return '<div class="advhide-captcha-box advhide-captcha-recaptcha-v3">' .
 					'<script src="https://www.google.com/recaptcha/api.js?render=' . urlencode($sitekey) . '"></script>' .
 					'<input type="hidden" name="g-recaptcha-response" class="advhide-g-recaptcha-v3-token" />' .
-					'<script>if (typeof grecaptcha !== "undefined") { grecaptcha.ready(function() { grecaptcha.execute("' . htmlspecialchars($sitekey, ENT_QUOTES, 'UTF-8') . '", {action: "advancedhide_unlock"}).then(function(token) { $(".advhide-g-recaptcha-v3-token").val(token); }); }); }</script>' .
+					'<script>if (typeof grecaptcha !== "undefined") { grecaptcha.ready(function() { grecaptcha.execute(' . $safe_js_sitekey . ', {action: "advancedhide_unlock"}).then(function(token) { $(".advhide-g-recaptcha-v3-token").val(token); }); }); }</script>' .
 				'</div>';
 			}
 
-			// 4. GD / GD Wave / Nogd (Image Captchas)
 			if ($captcha instanceof \phpbb\captcha\plugins\captcha_abstract)
 			{
 				$c_id = $captcha->confirm_id;
@@ -134,28 +130,10 @@ class auth_service
 		}
 		catch (\Exception $e)
 		{
-			return '';
+			return '<div class="advhide-captcha-box advhide-captcha-error"><span class="error">' . htmlspecialchars($this->language->lang('CAPTCHA_SERVICE_UNAVAILABLE'), ENT_QUOTES, 'UTF-8') . '</span></div>';
 		}
 
 		return '';
-	}
-
-	protected function ensure_schema()
-	{
-		if (self::$schema_checked)
-		{
-			return;
-		}
-		self::$schema_checked = true;
-
-		$table = $this->table_prefix . 'advancedhide_rl';
-		try
-		{
-			$this->db_tools->sql_column_change($table, 'rl_window', ['UINT:11', 0]);
-		}
-		catch (\Exception $e)
-		{
-		}
 	}
 
 	public function is_block_unlocked($post_id, hide_block $block)
@@ -180,24 +158,57 @@ class auth_service
 		$this->cache->put($cache_key, $unlocked, 1800);
 	}
 
-	public function consume_rate_limit($identity)
+	/**
+	 * Резервирование счетчиков с компенсирующим откатом при отказе любого уровня.
+	 *
+	 * @param string $user_identity Идентификатор учетной записи (u_<id>) или сессии (s_<id>)
+	 * @param string $ip             IP-адрес клиента
+	 * @param int    $post_id        ID сообщения
+	 * @param string $block_hash     Хэш содержимого блока
+	 * @return array|false Дескриптор резервации при успехе, false при исчерпании лимита
+	 */
+	public function acquire_rate_limit($user_identity, $ip, $post_id, $block_hash)
 	{
 		$minute_window = (int) floor(time() / 60);
-		$day_window = (int) floor(time() / 86400);
+		$day_window    = (int) floor(time() / 86400);
 
-		$ident_prefix = substr($identity, 0, 62);
+		$key_id    = 'm_' . substr($user_identity, 0, 62);
+		$key_d_id  = 'd_' . substr($user_identity, 0, 62);
+		$key_ip    = 'm_ip_' . substr(hash('sha256', $ip), 0, 59);
+		$key_block = 'm_bk_' . substr(hash('sha256', $post_id . '_' . $block_hash), 0, 59);
+
 		$minute_limit = max(1, (int)($this->config['advancedhide_rl_minute_limit'] ?? 5));
 		$day_limit    = max(1, (int)($this->config['advancedhide_rl_day_limit'] ?? 30));
+		$ip_limit     = max(10, $minute_limit * 4);
+		$block_limit  = max(15, $minute_limit * 6);
 
-		$minute_ok = $this->rl_consume('m_' . $ident_prefix, $minute_window, $minute_limit);
-		if (!$minute_ok)
+		// 1. Минутный контур пользователя (User / minute)
+		if (!$this->rl_consume($key_id, $minute_window, $minute_limit))
 		{
 			return false;
 		}
 
-		$day_ok = $this->rl_consume('d_' . $ident_prefix, $day_window, $day_limit);
-		if (!$day_ok)
+		// 2. Суточный контур пользователя (User / day)
+		if (!$this->rl_consume($key_d_id, $day_window, $day_limit))
 		{
+			$this->rl_refund($key_id, $minute_window);
+			return false;
+		}
+
+		// 3. Контур IP (IP / minute)
+		if (!$this->rl_consume($key_ip, $minute_window, $ip_limit))
+		{
+			$this->rl_refund($key_id, $minute_window);
+			$this->rl_refund($key_d_id, $day_window);
+			return false;
+		}
+
+		// 4. Контур блока (Block / minute)
+		if (!$this->rl_consume($key_block, $minute_window, $block_limit))
+		{
+			$this->rl_refund($key_id, $minute_window);
+			$this->rl_refund($key_d_id, $day_window);
+			$this->rl_refund($key_ip, $minute_window);
 			return false;
 		}
 
@@ -206,13 +217,50 @@ class auth_service
 			$this->rl_gc($minute_window, $day_window);
 		}
 
-		return true;
+		return [
+			'minute_window' => $minute_window,
+			'day_window'    => $day_window,
+			'key_id'        => $key_id,
+			'key_d_id'      => $key_d_id,
+			'key_ip'        => $key_ip,
+			'key_block'     => $key_block,
+			'refunded'      => false,
+		];
+	}
+
+	/**
+	 * Идемпотентный возврат зарезервированного слота строго в исходные окна
+	 * с защитой от повторного вызова (single-descriptor refund guard).
+	 *
+	 * @param array $reservation Дескриптор, полученный из acquire_rate_limit
+	 */
+	public function refund_rate_limit(array &$reservation)
+	{
+		if (
+			!empty($reservation['refunded']) ||
+			!isset(
+				$reservation['minute_window'],
+				$reservation['day_window'],
+				$reservation['key_id'],
+				$reservation['key_d_id'],
+				$reservation['key_ip'],
+				$reservation['key_block']
+			)
+		)
+		{
+			return;
+		}
+
+		$reservation['refunded'] = true;
+
+		$this->rl_refund($reservation['key_id'], $reservation['minute_window']);
+		$this->rl_refund($reservation['key_d_id'], $reservation['day_window']);
+		$this->rl_refund($reservation['key_ip'], $reservation['minute_window']);
+		$this->rl_refund($reservation['key_block'], $reservation['minute_window']);
 	}
 
 	protected function rl_consume($key, $window, $limit)
 	{
-		$this->ensure_schema();
-
 		$table = $this->table_prefix . 'advancedhide_rl';
 		$safe_key = $this->db->sql_escape($key);
 
@@ -243,6 +291,19 @@ class auth_service
 			' AND rl_count < ' . (int) $limit;
 		$this->db->sql_query($sql);
 		return $this->db->sql_affectedrows() > 0;
+	}
+
+	protected function rl_refund($key, $window)
+	{
+		$table = $this->table_prefix . 'advancedhide_rl';
+		$safe_key = $this->db->sql_escape($key);
+
+		$sql = 'UPDATE ' . $table .
+			' SET rl_count = rl_count - 1' .
+			' WHERE rl_key = \'' . $safe_key . '\'' .
+			' AND rl_window = ' . (int) $window .
+			' AND rl_count > 0';
+		$this->db->sql_query($sql);
 	}
 
 	protected function rl_gc($minute_window, $day_window)
@@ -284,7 +345,6 @@ class auth_service
 			$type = $cond['type'];
 			$args = $cond['args'];
 
-			// Проверка отключения модуля в ACP
 			if (!$this->is_module_enabled($type))
 			{
 				$can_view = false;

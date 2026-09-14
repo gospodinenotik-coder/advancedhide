@@ -66,4 +66,17 @@ $lang = array_merge($lang, [
 	'ADVHIDE_BTN_GROUPS_TIP'            => 'Hide content for all except specific group members',
 	'ADVHIDE_BTN_USERS_TIP'             => 'Hide content for all except specific usernames',
 	'ADVHIDE_BTN_PASS_TIP'              => 'Protect content with an unlockable password',
+
+	'HIDE_ERROR_TOO_MANY_PASSWORDS'     => 'Message contains too many password hide blocks (maximum 3 allowed).',
+	'CAPTCHA_SERVICE_UNAVAILABLE'       => 'Captcha verification service is temporarily unavailable. Please try again later.',
+	'ADVHIDE_BTN_GUEST_TIP'             => 'Hide content from guests (registered users only)',
+	'ADVHIDE_BTN_POSTS_TIP'             => 'Hide content until user reaches required post count',
+	'ADVHIDE_BTN_DAYS_TIP'              => 'Hide content based on account age (in days)',
+	'ADVHIDE_BTN_TIME_TIP'              => 'Hide content until specified date and time',
+	'ADVHIDE_BTN_REGDATE_TIP'           => 'Hide content for users registered after specified date',
+	'ADVHIDE_BTN_REPLY_TIP'             => 'Hide content until user replies to this topic',
+	'ADVHIDE_BTN_THANKS_TIP'            => 'Hide content until user thanks the author',
+	'ADVHIDE_BTN_GROUPS_TIP'            => 'Hide content for all except specific group members',
+	'ADVHIDE_BTN_USERS_TIP'             => 'Hide content for all except specific usernames',
+	'ADVHIDE_BTN_PASS_TIP'              => 'Protect content with an unlockable password',
 ]);
