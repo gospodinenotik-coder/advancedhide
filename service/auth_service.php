@@ -124,7 +124,7 @@ class auth_service
 			if ($captcha instanceof \phpbb\captcha\plugins\captcha_abstract)
 			{
 				$c_id = $captcha->confirm_id;
-				$img_url = append_sid($this->phpbb_root_path . 'ucp.' . $this->php_ext, 'mode=confirm&confirm_id=' . $c_id . '&type=' . CONFIRM_POST);
+				$img_url = append_sid($this->phpbb_root_path . 'ucp.' . $this->php_ext, 'mode=confirm&confirm_id=' . $c_id . '&type=' . CONFIRM_POST . '&t=' . time());
 				return '<div class="advhide-captcha-box advhide-captcha-gd">' .
 					'<div class="advhide-captcha-img"><img src="' . $img_url . '" alt="" /></div>' .
 					'<input type="hidden" name="confirm_id" value="' . htmlspecialchars($c_id, ENT_QUOTES, 'UTF-8') . '" />' .
