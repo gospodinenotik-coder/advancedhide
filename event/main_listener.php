@@ -298,7 +298,7 @@ class main_listener implements EventSubscriberInterface
 			}
 
 			// Блок заблокирован - защищаем вложения
-			if (preg_match_all('/\[attachment=(\d+)(?::[^\]]*)?\](.*?)(?:\[\/attachment(?::[^\]]*)?\])?/is', $block->content, $att_m))
+			if (preg_match_all('/\[attachment=(\d+)(?::[a-zA-Z0-9_-]+)?\](.*?)(?:\[\/attachment(?::[a-zA-Z0-9_-]+)?\])?/is', $block->content, $att_m))
 			{
 				foreach ($att_m[1] as $aid)
 				{
