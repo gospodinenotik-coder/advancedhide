@@ -119,6 +119,9 @@ class main_listener implements EventSubscriberInterface
 		);
 	}
 
+	/**
+	 * Валидация количества парольных блоков через синтаксический анализатор (единая грамматика)
+	 */
 	public function validate_post_passwords($event)
 	{
 		$post_data = $event['post_data'];
@@ -129,7 +132,9 @@ class main_listener implements EventSubscriberInterface
 			return;
 		}
 
-		$blocks = $this->parser->parse_blocks($message);
+		// Исключаем примеры BBCode внутри [code], чтобы они не засчитывались в лимит
+		$clean_message = preg_replace('/\[code(?:=[^\]]*)?\].*?\[\/code\]/is', '', $message);
+		$blocks = $this->parser->parse_blocks($clean_message);
 		$pass_count = 0;
 		foreach ($blocks as $b)
 		{
