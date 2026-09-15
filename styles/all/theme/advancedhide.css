@@ -135,3 +135,155 @@
 .advhide-btn i {
 	margin-right: 3px;
 }
+
+.advancedhide-box.hide-banned {
+	border-color: #880e4f;
+	background: #fce4ec;
+}
+
+.advancedhide-box.hide-banned .hide-header {
+	background: #f8bbd0;
+	border-bottom-color: #f48fb1;
+	color: #880e4f;
+}
+
+.advhide-btn-icon {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	color: inherit;
+	padding: 2px 6px;
+	opacity: 0.7;
+	border-radius: 3px;
+}
+
+.advhide-btn-icon:hover {
+	opacity: 1;
+	background: rgba(0, 0, 0, 0.08);
+}
+
+.advhide-action-bar {
+	margin-top: 8px;
+}
+
+/* Модальные окна */
+.advhide-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.advhide-modal-content {
+	background: #fff;
+	border-radius: 6px;
+	max-width: 600px;
+	width: 92%;
+	max-height: 85vh;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+	overflow: hidden;
+}
+
+.advhide-modal-large {
+	max-width: 850px;
+}
+
+.advhide-modal-header {
+	background: #f1f5f9;
+	padding: 12px 16px;
+	border-bottom: 1px solid #e2e8f0;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.advhide-modal-header h3 {
+	margin: 0;
+	font-size: 1.15em;
+	color: #1e293b;
+}
+
+.advhide-modal-close {
+	background: transparent;
+	border: none;
+	font-size: 1.5em;
+	cursor: pointer;
+	line-height: 1;
+	color: #64748b;
+}
+
+.advhide-modal-close:hover {
+	color: #0f172a;
+}
+
+.advhide-modal-body {
+	padding: 16px;
+	overflow-y: auto;
+	flex: 1;
+}
+
+.advhide-modal-footer {
+	padding: 10px 16px;
+	background: #f8fafc;
+	border-top: 1px solid #e2e8f0;
+	text-align: right;
+}
+
+/* Сетка конструктора */
+.advhide-builder-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 10px;
+	margin-bottom: 15px;
+}
+
+.advhide-cond-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 8px;
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 4px;
+}
+
+.advhide-cond-row label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.9em;
+	cursor: pointer;
+	margin: 0;
+}
+
+.advhide-preview-box {
+	background: #f1f5f9;
+	border: 1px solid #cbd5e1;
+	border-radius: 4px;
+	padding: 10px;
+	margin-top: 10px;
+}
+
+.advhide-preview-box code {
+	word-break: break-all;
+	font-size: 1.05em;
+}
+
+/* Таблицы аудита */
+.advhide-audit-table {
+	width: 100%;
+	font-size: 0.9em;
+	margin-bottom: 10px;
+}
+
+.advhide-audit-table th, .advhide-audit-table td {
+	padding: 6px 8px;
+}

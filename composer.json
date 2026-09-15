@@ -1,19 +1,25 @@
 {
 	"name": "vendor/advancedhide",
 	"type": "phpbb-extension",
-	"description": "Advanced BBCode Hide extension for phpBB 3.3.17 with multi-condition logic, security protections, and password unlock.",
-	"version": "1.1.5",
+	"description": "Advanced BBCode Hide extension for phpBB 3.3.17 with multi-condition logic, security protections, audit logging, and password unlock.",
+	"homepage": "https://github.com/vendor/advancedhide",
+	"version": "1.2.0",
+	"time": "2026-09-15",
 	"license": "GPL-2.0-only",
 	"authors": [
 		{
 			"name": "Vendor Developer",
-			"homepage": "https://example.com",
-			"role": "Developer"
+			"homepage": "https://github.com/vendor",
+			"role": "Lead Developer"
 		}
 	],
 	"require": {
 		"php": ">=7.2 <8.5",
 		"composer/installers": "~1.0"
+	},
+	"support": {
+		"issues": "https://github.com/vendor/advancedhide/issues",
+		"source": "https://github.com/vendor/advancedhide"
 	},
 	"extra": {
 		"display-name": "AdvancedHide Content BBCode",

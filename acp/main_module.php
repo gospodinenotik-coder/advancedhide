@@ -14,14 +14,137 @@ class main_module
 
 	public function main($id, $mode)
 	{
-		global $config, $request, $template, $user, $language;
+		global $config, $request, $template, $user, $language, $db, $table_prefix;
 
 		$language->add_lang('info_acp_advancedhide', 'vendor/advancedhide');
 		$language->add_lang('common', 'vendor/advancedhide');
+
+		$modules = ['guest', 'posts', 'days', 'time', 'regdate', 'reply', 'thanks', 'groups', 'users', 'not_groups', 'not_users', 'pass'];
+
+		if ($mode === 'audit')
+		{
+			$this->tpl_name = 'acp_advancedhide_audit';
+			$this->page_title = $language->lang('ACP_ADVANCEDHIDE_AUDIT');
+
+			$action = $request->variable('action', '');
+			$ban_id = $request->variable('ban_id', 0);
+			$report_id = $request->variable('report_id', 0);
+
+			if ($action === 'prune' && check_link_hash($request->variable('hash', ''), 'prune_advhide_logs'))
+			{
+				$threshold = time() - (30 * 86400);
+				$sql = 'DELETE FROM ' . $table_prefix . 'advancedhide_logs WHERE attempt_time < ' . (int)$threshold;
+				$db->sql_query($sql);
+				trigger_error($language->lang('ADVHIDE_PRUNE_SUCCESS') . adm_back_link($this->u_action));
+			}
+
+			if ($action === 'unban' && $ban_id > 0 && check_link_hash($request->variable('hash', ''), 'unban_advhide_' . $ban_id))
+			{
+				$sql = 'DELETE FROM ' . $table_prefix . 'advancedhide_bans WHERE ban_id = ' . (int)$ban_id;
+				$db->sql_query($sql);
+				trigger_error($language->lang('ADVHIDE_UNBAN_SUCCESS') . adm_back_link($this->u_action));
+			}
+
+			if ($action === 'close_report' && $report_id > 0 && check_link_hash($request->variable('hash', ''), 'close_advhide_rep_' . $report_id))
+			{
+				$sql = 'UPDATE ' . $table_prefix . 'advancedhide_reports SET report_closed = 1 WHERE report_id = ' . (int)$report_id;
+				$db->sql_query($sql);
+				trigger_error($language->lang('ADVHIDE_REPORT_CLOSED') . adm_back_link($this->u_action));
+			}
+
+			$filter_status = $request->variable('filter_status', '');
+
+			// Запрос логов
+			$sql_where = '';
+			if ($filter_status !== '')
+			{
+				$sql_where = ' WHERE l.status = \'' . $db->sql_escape($filter_status) . '\'';
+			}
+
+			$sql = 'SELECT l.*, u.username, u.user_colour FROM ' . $table_prefix . 'advancedhide_logs l
+				LEFT JOIN ' . USERS_TABLE . ' u ON (l.user_id = u.user_id)
+				' . $sql_where . '
+				ORDER BY l.attempt_time DESC';
+			$res = $db->sql_query_limit($sql, 100);
+
+			while ($row = $db->sql_fetchrow($res))
+			{
+				$status_key = 'ADVHIDE_AUDIT_' . strtoupper($row['status']);
+				$status_text = $language->is_set($status_key) ? $language->lang($status_key) : $row['status'];
+
+				$template->assign_block_vars('logs', [
+					'LOG_ID'        => (int)$row['log_id'],
+					'POST_ID'       => (int)$row['post_id'],
+					'BLOCK_INDEX'   => (int)$row['block_index'],
+					'USERNAME'      => !empty($row['username']) ? get_username_string('full', $row['user_id'], $row['username'], $row['user_colour']) : $language->lang('GUEST'),
+					'USER_IP'       => $row['user_ip'],
+					'TIME'          => $user->format_date($row['attempt_time']),
+					'STATUS'        => $status_text,
+					'STATUS_RAW'    => $row['status'],
+					'ATTEMPT_COUNT' => (int)$row['attempt_count'],
+					'MASKED_PASS'   => $row['masked_pass'],
+					'U_POST'        => append_sid("{$phpbb_root_path}viewtopic.$php_ext", 'p=' . $row['post_id'] . '#p' . $row['post_id']),
+				]);
+			}
+			$db->sql_freeresult($res);
+
+			// Запрос банов
+			$sql_b = 'SELECT b.*, u.username, u.user_colour, mb.username AS mod_username, mb.user_colour AS mod_colour
+				FROM ' . $table_prefix . 'advancedhide_bans b
+				LEFT JOIN ' . USERS_TABLE . ' u ON (b.user_id = u.user_id)
+				LEFT JOIN ' . USERS_TABLE . ' mb ON (b.banned_by = mb.user_id)
+				ORDER BY b.ban_start DESC';
+			$res_b = $db->sql_query($sql_b);
+
+			while ($row_b = $db->sql_fetchrow($res_b))
+			{
+				$template->assign_block_vars('bans', [
+					'BAN_ID'       => (int)$row_b['ban_id'],
+					'POST_ID'      => (int)$row_b['post_id'],
+					'BLOCK_INDEX'  => (int)$row_b['block_index'],
+					'USERNAME'     => get_username_string('full', $row_b['user_id'], $row_b['username'], $row_b['user_colour']),
+					'MOD_USERNAME' => get_username_string('full', $row_b['banned_by'], $row_b['mod_username'], $row_b['mod_colour']),
+					'BAN_START'    => $user->format_date($row_b['ban_start']),
+					'BAN_END'      => $row_b['ban_end'] > 0 ? $user->format_date($row_b['ban_end']) : $language->lang('ADVHIDE_BAN_PERMANENT'),
+					'REASON'       => $row_b['ban_reason'],
+					'U_UNBAN'      => $this->u_action . '&amp;action=unban&amp;ban_id=' . $row_b['ban_id'] . '&amp;hash=' . generate_link_hash('unban_advhide_' . $row_b['ban_id']),
+				]);
+			}
+			$db->sql_freeresult($res_b);
+
+			// Запрос жалоб и апелляций
+			$sql_r = 'SELECT r.*, u.username, u.user_colour
+				FROM ' . $table_prefix . 'advancedhide_reports r
+				LEFT JOIN ' . USERS_TABLE . ' u ON (r.reporter_id = u.user_id)
+				WHERE r.report_closed = 0
+				ORDER BY r.report_time DESC';
+			$res_r = $db->sql_query($sql_r);
+
+			while ($row_r = $db->sql_fetchrow($res_r))
+			{
+				$template->assign_block_vars('reports', [
+					'REPORT_ID'   => (int)$row_r['report_id'],
+					'POST_ID'     => (int)$row_r['post_id'],
+					'BLOCK_INDEX' => (int)$row_r['block_index'],
+					'REPORTER'    => get_username_string('full', $row_r['reporter_id'], $row_r['username'], $row_r['user_colour']),
+					'TIME'        => $user->format_date($row_r['report_time']),
+					'REASON'      => $row_r['report_reason'],
+					'U_CLOSE'     => $this->u_action . '&amp;action=close_report&amp;report_id=' . $row_r['report_id'] . '&amp;hash=' . generate_link_hash('close_advhide_rep_' . $row_r['report_id']),
+				]);
+			}
+			$db->sql_freeresult($res_r);
+
+			$template->assign_vars([
+				'U_ACTION'        => $this->u_action,
+				'U_PRUNE'         => $this->u_action . '&amp;action=prune&amp;hash=' . generate_link_hash('prune_advhide_logs'),
+				'FILTER_STATUS'   => $filter_status,
+			]);
+
+			return;
+		}
+
 		$this->tpl_name = 'acp_advancedhide';
 		$this->page_title = $language->lang('ACP_ADVANCEDHIDE_TITLE');
-
-		$modules = ['guest', 'posts', 'days', 'time', 'regdate', 'reply', 'thanks', 'groups', 'users', 'pass'];
 
 		if ($request->is_set_post('submit'))
 		{

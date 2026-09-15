@@ -53,3 +53,14 @@ services:
             - '@captcha.factory'
             - '%core.root_path%'
             - '%core.php_ext%'
+            - '%core.table_prefix%'
+
+    vendor.advancedhide.console.reparse:
+        class: vendor\advancedhide\console\command\reparse
+        arguments:
+            - '@user'
+            - '@dbal.conn'
+            - '@vendor.advancedhide.parser'
+            - '%core.table_prefix%'
+        tags:
+            - { name: console.command }

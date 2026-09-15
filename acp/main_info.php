@@ -19,6 +19,11 @@ class main_info
 					'auth'  => 'ext_vendor/advancedhide && acl_a_board',
 					'cat'   => ['ACP_ADVANCEDHIDE_TITLE'],
 				],
+				'audit' => [
+					'title' => 'ACP_ADVANCEDHIDE_AUDIT',
+					'auth'  => 'ext_vendor/advancedhide && acl_a_board',
+					'cat'   => ['ACP_ADVANCEDHIDE_TITLE'],
+				],
 			],
 		];
 	}

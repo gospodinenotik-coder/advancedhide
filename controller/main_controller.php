@@ -32,8 +32,9 @@ class main_controller
 	protected $captcha_factory;
 	protected $phpbb_root_path;
 	protected $php_ext;
+	protected $table_prefix;
 
-	public function __construct(config $config, user $user, auth $auth, driver_interface $db, request_interface $request, language $language, cache_interface $cache, block_parser $parser, auth_service $auth_service, captcha_factory $captcha_factory, $phpbb_root_path, $php_ext)
+	public function __construct(config $config, user $user, auth $auth, driver_interface $db, request_interface $request, language $language, cache_interface $cache, block_parser $parser, auth_service $auth_service, captcha_factory $captcha_factory, $phpbb_root_path, $php_ext, $table_prefix = null)
 	{
 		$this->config = $config;
 		$this->user = $user;
@@ -47,6 +48,69 @@ class main_controller
 		$this->captcha_factory = $captcha_factory;
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
+		$this->table_prefix = $table_prefix ?: (defined('POSTS_TABLE') ? substr(POSTS_TABLE, 0, -5) : 'phpbb_');
+	}
+
+	protected function mask_password($pass)
+	{
+		$len = mb_strlen($pass);
+		if ($len <= 2)
+		{
+			return str_repeat('*', max(1, $len));
+		}
+		if ($len <= 5)
+		{
+			return mb_substr($pass, 0, 1) . '***' . mb_substr($pass, -1);
+		}
+		return mb_substr($pass, 0, 2) . '***' . mb_substr($pass, -1);
+	}
+
+	protected function log_attempt($post_id, $block_index, $user_id, $ip, $status, $entered_pass = '')
+	{
+		$post_id = (int)$post_id;
+		$block_index = (int)$block_index;
+		$user_id = (int)$user_id;
+		$ip = (string)$ip;
+		$status = substr((string)$status, 0, 32);
+		$masked = $entered_pass !== '' ? $this->mask_password($entered_pass) : '';
+		$now = time();
+		$hour_start = (int)(floor($now / 3600) * 3600);
+
+		$table = $this->table_prefix . 'advancedhide_logs';
+
+		$sql = 'SELECT log_id, attempt_count FROM ' . $table . '
+			WHERE post_id = ' . $post_id . '
+				AND block_index = ' . $block_index . '
+				AND user_id = ' . $user_id . '
+				AND user_ip = \'' . $this->db->sql_escape($ip) . '\'
+				AND status = \'' . $this->db->sql_escape($status) . '\'
+				AND attempt_time >= ' . $hour_start;
+		$result = $this->db->sql_query_limit($sql, 1);
+		$existing = $this->db->sql_fetchrow($result);
+		$this->db->sql_freeresult($result);
+
+		if ($existing)
+		{
+			$sql = 'UPDATE ' . $table . '
+				SET attempt_count = attempt_count + 1,
+					attempt_time = ' . $now . '
+				WHERE log_id = ' . (int)$existing['log_id'];
+			$this->db->sql_query($sql);
+		}
+		else
+		{
+			$sql_ary = [
+				'post_id'       => $post_id,
+				'block_index'   => $block_index,
+				'user_id'       => $user_id,
+				'user_ip'       => $ip,
+				'attempt_time'  => $now,
+				'status'        => $status,
+				'masked_pass'   => $masked,
+				'attempt_count' => 1,
+			];
+			$this->db->sql_query('INSERT INTO ' . $table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
+		}
 	}
 
 	public function unlock()
@@ -121,20 +185,36 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 400);
 		}
 
-		// Идентичность пользователя не привязывается к сетевому IP
 		$user_id = (int)$this->user->data['user_id'];
+		$user_ip = $this->user->ip;
+
+		// Проверка бана пользователя на данный блок
+		$ban_info = $this->auth_service->get_user_block_ban($post_id, $block_id, $user_id);
+		if ($ban_info !== null && !$this->auth->acl_get('m_hide_override', $forum_id))
+		{
+			$this->log_attempt($post_id, $block_id, $user_id, $user_ip, 'banned', $pass);
+			$reason_msg = !empty($ban_info['ban_reason']) ? $this->language->lang('HIDE_BANNED_WITH_REASON', $ban_info['ban_reason']) : $this->language->lang('HIDE_BANNED_FROM_BLOCK');
+			return new JsonResponse([
+				'success'   => false,
+				'message'   => $reason_msg,
+				'is_banned' => true,
+				'post_id'   => $post_id,
+				'block_id'  => $block_id,
+			], 403);
+		}
+
 		$session_id = !empty($this->user->session_id) ? $this->user->session_id : $this->user->ip;
 		$user_token = ($user_id > 1) ? 'u_' . $user_id : 's_' . $session_id;
 		$user_identity = hash('sha256', $user_token . '|' . $post_id . '|' . $block->block_hash);
-		$user_ip = $this->user->ip;
 
 		$reservation = $this->auth_service->acquire_rate_limit($user_identity, $user_ip, $post_id, $block->block_hash);
 		if ($reservation === false)
 		{
+			$this->log_attempt($post_id, $block_id, $user_id, $user_ip, 'rate_limited', $pass);
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_RATE_LIMIT_EXCEEDED')], 429);
 		}
 
-		// Валидация Captcha (Fail-Closed c возвратом зарезервированного слота при сбое сервиса)
+		// Валидация Captcha
 		if (!empty($this->config['advancedhide_enable_captcha']))
 		{
 			$plugin_name = $this->config['captcha_plugin'] ?? '';
@@ -157,6 +237,7 @@ class main_controller
 				$vc_response = $captcha->validate();
 				if ($vc_response !== false)
 				{
+					$this->log_attempt($post_id, $block_id, $user_id, $user_ip, 'captcha_failed', $pass);
 					$err_text = $this->language->is_set($vc_response) ? $this->language->lang($vc_response) : ($vc_response ?: $this->language->lang('CONFIRM_CODE_WRONG'));
 					return new JsonResponse([
 						'success'       => false,
@@ -188,6 +269,7 @@ class main_controller
 			$re_eval = $this->auth_service->evaluate_block($block, $context);
 			if (!$re_eval['can_view'])
 			{
+				$this->log_attempt($post_id, $block_id, $user_id, $user_ip, 'failed', $pass);
 				$this->auth_service->refund_rate_limit($reservation);
 				return new JsonResponse([
 					'success' => false,
@@ -195,6 +277,7 @@ class main_controller
 				], 403);
 			}
 
+			$this->log_attempt($post_id, $block_id, $user_id, $user_ip, 'unlocked', $pass);
 			$this->auth_service->refund_rate_limit($reservation);
 			$this->auth_service->unlock_block($post_id, $block);
 
@@ -219,10 +302,255 @@ class main_controller
 			return new JsonResponse(['success' => true, 'html' => $html]);
 		}
 
+		$this->log_attempt($post_id, $block_id, $user_id, $user_ip, 'failed', $pass);
 		return new JsonResponse([
 			'success'     => false,
 			'message'     => $this->language->lang('HIDE_PASS_INCORRECT'),
 			'new_captcha' => !empty($this->config['advancedhide_enable_captcha']) ? $this->auth_service->generate_captcha_html() : '',
 		], 401);
+	}
+
+	public function audit()
+	{
+		if (!$this->request->is_ajax())
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('INVALID_REQUEST')], 400);
+		}
+
+		$post_id  = $this->request->variable('post_id', 0);
+		$block_id = $this->request->variable('block_id', 0);
+
+		$sql = 'SELECT poster_id, forum_id FROM ' . POSTS_TABLE . ' WHERE post_id = ' . (int)$post_id;
+		$res = $this->db->sql_query($sql);
+		$post = $this->db->sql_fetchrow($res);
+		$this->db->sql_freeresult($res);
+
+		if (!$post)
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 404);
+		}
+
+		$forum_id = (int)$post['forum_id'];
+		$poster_id = (int)$post['poster_id'];
+		$user_id = (int)$this->user->data['user_id'];
+		$is_mod = $this->auth->acl_get('m_hide_override', $forum_id) || $this->auth->acl_get('m_hide_ban', $forum_id);
+		$is_author = ($poster_id > 0 && $user_id === $poster_id);
+
+		if (!$is_mod && !$is_author)
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
+		}
+
+		$logs_table = $this->table_prefix . 'advancedhide_logs';
+		$sql = 'SELECT l.*, u.username, u.user_colour FROM ' . $logs_table . ' l
+			LEFT JOIN ' . USERS_TABLE . ' u ON (l.user_id = u.user_id)
+			WHERE l.post_id = ' . (int)$post_id . ($block_id > 0 ? (' AND l.block_index = ' . (int)$block_id) : '') . '
+			ORDER BY l.attempt_time DESC';
+		$res = $this->db->sql_query_limit($sql, 50);
+
+		$entries = [];
+		while ($row = $this->db->sql_fetchrow($res))
+		{
+			$ip = $row['user_ip'];
+			if (!$is_mod && !empty($ip))
+			{
+				$ip_parts = explode('.', $ip);
+				if (count($ip_parts) === 4)
+				{
+					$ip = $ip_parts[0] . '.' . $ip_parts[1] . '.*.*';
+				}
+				else
+				{
+					$ip = substr($ip, 0, 8) . '...';
+				}
+			}
+
+			$status_key = 'ADVHIDE_AUDIT_' . strtoupper($row['status']);
+			$status_label = $this->language->is_set($status_key) ? $this->language->lang($status_key) : $row['status'];
+
+			$entries[] = [
+				'log_id'        => (int)$row['log_id'],
+				'block_index'   => (int)$row['block_index'],
+				'username'      => !empty($row['username']) ? $row['username'] : $this->language->lang('GUEST'),
+				'user_id'       => (int)$row['user_id'],
+				'user_ip'       => $ip,
+				'attempt_time'  => $this->user->format_date($row['attempt_time']),
+				'status'        => $status_label,
+				'status_raw'    => $row['status'],
+				'attempt_count' => (int)$row['attempt_count'],
+				'masked_pass'   => $row['masked_pass'],
+			];
+		}
+		$this->db->sql_freeresult($res);
+
+		$bans_table = $this->table_prefix . 'advancedhide_bans';
+		$sql_b = 'SELECT b.*, u.username FROM ' . $bans_table . ' b
+			LEFT JOIN ' . USERS_TABLE . ' u ON (b.user_id = u.user_id)
+			WHERE b.post_id = ' . (int)$post_id . ($block_id > 0 ? (' AND b.block_index = ' . (int)$block_id) : '') . '
+			ORDER BY b.ban_start DESC';
+		$res_b = $this->db->sql_query($sql_b);
+		$bans = [];
+		while ($row = $this->db->sql_fetchrow($res_b))
+		{
+			$bans[] = [
+				'ban_id'      => (int)$row['ban_id'],
+				'block_index' => (int)$row['block_index'],
+				'user_id'     => (int)$row['user_id'],
+				'username'    => $row['username'],
+				'ban_start'   => $this->user->format_date($row['ban_start']),
+				'ban_end'     => $row['ban_end'] > 0 ? $this->user->format_date($row['ban_end']) : $this->language->lang('ADVHIDE_BAN_PERMANENT'),
+				'ban_reason'  => $row['ban_reason'],
+			];
+		}
+		$this->db->sql_freeresult($res_b);
+
+		return new JsonResponse([
+			'success' => true,
+			'logs'    => $entries,
+			'bans'    => $bans,
+			'can_ban' => ($is_mod || $is_author),
+		]);
+	}
+
+	public function ban_user()
+	{
+		if (!$this->request->is_ajax())
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('INVALID_REQUEST')], 400);
+		}
+
+		if (!check_form_key('advancedhide_ban'))
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FORM_INVALID')], 403);
+		}
+
+		$post_id         = $this->request->variable('post_id', 0);
+		$block_id        = $this->request->variable('block_id', 0);
+		$target_user_id  = $this->request->variable('user_id', 0);
+		$target_username = $this->request->variable('username', '', true);
+		$days            = $this->request->variable('days', 0);
+		$reason          = $this->request->variable('reason', '', true);
+		$action          = $this->request->variable('action', 'ban');
+		$ban_id          = $this->request->variable('ban_id', 0);
+
+		$sql = 'SELECT poster_id, forum_id FROM ' . POSTS_TABLE . ' WHERE post_id = ' . (int)$post_id;
+		$res = $this->db->sql_query($sql);
+		$post = $this->db->sql_fetchrow($res);
+		$this->db->sql_freeresult($res);
+
+		if (!$post)
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 404);
+		}
+
+		$forum_id        = (int)$post['forum_id'];
+		$poster_id       = (int)$post['poster_id'];
+		$current_user_id = (int)$this->user->data['user_id'];
+		$is_mod          = $this->auth->acl_get('m_hide_ban', $forum_id);
+		$is_author       = ($poster_id > 0 && $current_user_id === $poster_id);
+
+		if (!$is_mod && !$is_author)
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
+		}
+
+		if ($action === 'unban' && $ban_id > 0)
+		{
+			$this->auth_service->remove_block_ban($ban_id);
+			return new JsonResponse(['success' => true, 'message' => $this->language->lang('ADVHIDE_UNBAN_SUCCESS')]);
+		}
+
+		if ($target_user_id <= 1 && $target_username !== '')
+		{
+			$sql_u = 'SELECT user_id FROM ' . USERS_TABLE . ' WHERE username_clean = \'' . $this->db->sql_escape(utf8_clean_string($target_username)) . '\'';
+			$res_u = $this->db->sql_query($sql_u);
+			$u_row = $this->db->sql_fetchrow($res_u);
+			$this->db->sql_freeresult($res_u);
+			if ($u_row)
+			{
+				$target_user_id = (int)$u_row['user_id'];
+			}
+		}
+
+		if ($target_user_id <= 1)
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('NO_USER')], 400);
+		}
+
+		$this->auth_service->add_block_ban($post_id, $block_id, $target_user_id, $current_user_id, $days, $reason);
+
+		return new JsonResponse(['success' => true, 'message' => $this->language->lang('ADVHIDE_BAN_SUCCESS')]);
+	}
+
+	public function report_bruteforce()
+	{
+		if (!$this->request->is_ajax())
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('INVALID_REQUEST')], 400);
+		}
+
+		if (!check_form_key('advancedhide_report'))
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FORM_INVALID')], 403);
+		}
+
+		$post_id  = $this->request->variable('post_id', 0);
+		$block_id = $this->request->variable('block_id', 0);
+		$reason   = $this->request->variable('reason', '', true);
+
+		$user_id = (int)$this->user->data['user_id'];
+		if ($user_id <= 1)
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('NOT_AUTHORISED')], 403);
+		}
+
+		$reports_table = $this->table_prefix . 'advancedhide_reports';
+		$sql_ary = [
+			'post_id'       => (int)$post_id,
+			'block_index'   => (int)$block_id,
+			'reporter_id'   => $user_id,
+			'report_time'   => time(),
+			'report_reason' => $reason,
+			'report_closed' => 0,
+		];
+		$this->db->sql_query('INSERT INTO ' . $reports_table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
+
+		return new JsonResponse(['success' => true, 'message' => $this->language->lang('ADVHIDE_REPORT_SUBMITTED')]);
+	}
+
+	public function submit_appeal()
+	{
+		if (!$this->request->is_ajax())
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('INVALID_REQUEST')], 400);
+		}
+
+		if (!check_form_key('advancedhide_appeal'))
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FORM_INVALID')], 403);
+		}
+
+		$post_id  = $this->request->variable('post_id', 0);
+		$block_id = $this->request->variable('block_id', 0);
+		$reason   = $this->request->variable('reason', '', true);
+
+		$user_id = (int)$this->user->data['user_id'];
+		if ($user_id <= 1)
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('NOT_AUTHORISED')], 403);
+		}
+
+		$reports_table = $this->table_prefix . 'advancedhide_reports';
+		$sql_ary = [
+			'post_id'       => (int)$post_id,
+			'block_index'   => (int)$block_id,
+			'reporter_id'   => $user_id,
+			'report_time'   => time(),
+			'report_reason' => '[APPEAL] ' . $reason,
+			'report_closed' => 0,
+		];
+		$this->db->sql_query('INSERT INTO ' . $reports_table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
+
+		return new JsonResponse(['success' => true, 'message' => $this->language->lang('ADVHIDE_APPEAL_SUBMITTED')]);
 	}
 }

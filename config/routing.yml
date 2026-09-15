@@ -2,3 +2,23 @@ vendor_advancedhide_unlock:
     path: /advancedhide/unlock
     defaults: { _controller: vendor.advancedhide.controller:unlock }
     methods: [POST]
+
+vendor_advancedhide_audit:
+    path: /advancedhide/audit
+    defaults: { _controller: vendor.advancedhide.controller:audit }
+    methods: [GET, POST]
+
+vendor_advancedhide_ban:
+    path: /advancedhide/ban
+    defaults: { _controller: vendor.advancedhide.controller:ban_user }
+    methods: [POST]
+
+vendor_advancedhide_report:
+    path: /advancedhide/report
+    defaults: { _controller: vendor.advancedhide.controller:report_bruteforce }
+    methods: [POST]
+
+vendor_advancedhide_appeal:
+    path: /advancedhide/appeal
+    defaults: { _controller: vendor.advancedhide.controller:submit_appeal }
+    methods: [POST]
