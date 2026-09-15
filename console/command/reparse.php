@@ -39,7 +39,7 @@ class reparse extends Command
 		$this
 			->setName('advancedhide:reparse')
 			->setDescription('Reparses all [hide] blocks in posts and updates legacy or plaintext passwords to secure modern hashes.')
-			->addOption('batch-size', 'b', InputOption::VALUE_REQUIRED, 'Number of posts to process per batch', 200);
+			->addOption('batch-size', 'b', InputOption::VALUE_REQUIRED, 'Number of posts to process per batch', 500);
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output)
@@ -47,21 +47,24 @@ class reparse extends Command
 		$batch_size = (int) $input->getOption('batch-size');
 		if ($batch_size <= 0)
 		{
-			$batch_size = 200;
+			$batch_size = 500;
 		}
 
 		$output->writeln('<info>AdvancedHide Content Reparser</info>');
 		$output->writeln('<info>Starting AdvancedHide post reparse...</info>');
 
 		$posts_table = $this->table_prefix . 'posts';
-		$sql = 'SELECT COUNT(post_id) AS total FROM ' . $posts_table . " WHERE post_text " . $this->db->sql_like_expression($this->db->get_any_char() . '[hide' . $this->db->get_any_char());
-		$result = $this->db->sql_query($sql);
+		$sql_count = 'SELECT COUNT(post_id) AS total FROM ' . $posts_table . '
+			WHERE post_text ' . $this->db->sql_like_expression($this->db->get_any_char() . '[hide' . $this->db->get_any_char()) . '
+			   OR post_text ' . $this->db->sql_like_expression($this->db->get_any_char() . '<hide' . $this->db->get_any_char());
+		$result = $this->db->sql_query($sql_count);
 		$total_posts = (int) $this->db->sql_fetchfield('total');
 		$this->db->sql_freeresult($result);
 
 		if ($total_posts === 0)
 		{
 			$output->writeln('<comment>No posts containing [hide] BBCode found.</comment>');
+			$output->writeln('<info>[OK] Reparsing complete. Synchronized 0 posts.</info>');
 			return 0;
 		}
 
@@ -71,19 +74,15 @@ class reparse extends Command
 		$updated = 0;
 		$last_post_id = 0;
 
-		while ($processed < $total_posts)
+		while (true)
 		{
 			$sql = 'SELECT post_id, post_text FROM ' . $posts_table . '
-				WHERE post_id > ' . (int) $last_post_id . "
-					AND post_text " . $this->db->sql_like_expression($this->db->get_any_char() . '[hide' . $this->db->get_any_char()) . '
+				WHERE post_id > ' . (int) $last_post_id . '
+					AND (post_text ' . $this->db->sql_like_expression($this->db->get_any_char() . '[hide' . $this->db->get_any_char()) . '
+					 OR post_text ' . $this->db->sql_like_expression($this->db->get_any_char() . '<hide' . $this->db->get_any_char()) . ')
 				ORDER BY post_id ASC';
 			$result = $this->db->sql_query_limit($sql, $batch_size);
-
-			$batch_posts = [];
-			while ($row = $this->db->sql_fetchrow($result))
-			{
-				$batch_posts[] = $row;
-			}
+			$batch_posts = $this->db->sql_fetchrowset($result);
 			$this->db->sql_freeresult($result);
 
 			if (empty($batch_posts))

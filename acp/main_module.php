@@ -38,14 +38,14 @@ class main_module
 				trigger_error($language->lang('ADVHIDE_PRUNE_SUCCESS') . adm_back_link($this->u_action));
 			}
 
-			if ($action === 'unban' && $ban_id > 0 && check_link_hash($request->variable('hash', ''), 'unban_advhide_' . $ban_id))
+			if ($action === 'unban' && $ban_id > 0 && (check_link_hash($request->variable('hash', ''), 'unban_advhide_' . $ban_id) || check_link_hash($request->variable('hash', ''), 'advhide_appeal' . $ban_id)))
 			{
 				$sql = 'DELETE FROM ' . $table_prefix . 'advancedhide_bans WHERE ban_id = ' . (int)$ban_id;
 				$db->sql_query($sql);
 				trigger_error($language->lang('ADVHIDE_UNBAN_SUCCESS') . adm_back_link($this->u_action));
 			}
 
-			if ($action === 'reject_appeal' && $ban_id > 0 && check_link_hash($request->variable('hash', ''), 'reject_advhide_' . $ban_id))
+			if ($action === 'reject_appeal' && $ban_id > 0 && (check_link_hash($request->variable('hash', ''), 'reject_advhide_' . $ban_id) || check_link_hash($request->variable('hash', ''), 'advhide_appeal' . $ban_id)))
 			{
 				$sql = "UPDATE " . $table_prefix . "advancedhide_bans SET appeal_status = 'rejected' WHERE ban_id = " . (int)$ban_id;
 				$db->sql_query($sql);

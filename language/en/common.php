@@ -95,6 +95,7 @@ $lang = array_merge($lang, [
 	'HIDE_BANNED_FROM_BLOCK'            => 'You have been banned from accessing this hidden block.',
 	'HIDE_BANNED_WITH_REASON'           => 'You have been banned from accessing this hidden block. Reason: %s',
 	'HIDE_NO_POST_AUTH'                 => 'You do not have permission to use the [hide] BBCode in this post.',
+	'HIDE_ERROR_NO_PERMISSION'          => 'You do not have permission to use the [hide] BBCode in this post.',
 	'HIDE_NO_PASS_AUTH'                 => 'You do not have permission to set passwords on hidden blocks.',
 	'HIDE_BAN_SUCCESS'                  => 'User has been banned from this block.',
 	'HIDE_REPORT_SUBMITTED'             => 'Brute-force report has been submitted to moderators.',

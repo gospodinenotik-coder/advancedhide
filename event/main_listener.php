@@ -167,7 +167,7 @@ class main_listener implements EventSubscriberInterface
 		$error = $event['error'];
 
 		// Проверка права на использование [hide]
-		if (!$this->auth->acl_get('u_hide_use') || ($forum_id > 0 && !$this->auth->acl_get('f_hide_post', $forum_id)))
+		if (!$this->auth->acl_get('u_hide_use') || ($forum_id > 0 && !$this->auth->acl_get('f_hide_post', $forum_id) && !$this->auth->acl_get('a_')))
 		{
 			$error[] = $this->language->lang('HIDE_NO_POST_AUTH');
 			$event['error'] = $error;

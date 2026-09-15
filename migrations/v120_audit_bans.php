@@ -111,6 +111,7 @@ class v120_audit_bans extends \phpbb\db\migration\migration
 			['permission.permission_set', ['ROLE_USER_FULL', 'u_hide_pass']],
 			['permission.permission_set', ['ROLE_FORUM_STANDARD', 'f_hide_post']],
 			['permission.permission_set', ['ROLE_FORUM_FULL', 'f_hide_post']],
+			['permission.permission_set', ['ROLE_FORUM_ON_FULL', 'f_hide_post']],
 			['permission.permission_set', ['ROLE_MOD_FULL', 'm_hide_ban']],
 			['permission.permission_set', ['ROLE_ADMIN_FULL', 'm_hide_ban']],
 

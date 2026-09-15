@@ -351,12 +351,12 @@ class main_controller
 		$forum_id = (int)$post['forum_id'];
 		$poster_id = (int)$post['poster_id'];
 		$user_id = (int)$this->user->data['user_id'];
-		$is_mod = $this->auth->acl_get('m_hide_override', $forum_id) || $this->auth->acl_get('m_hide_ban', $forum_id);
+		$is_mod = $this->auth->acl_get('m_hide_override', $forum_id) || $this->auth->acl_get('m_hide_ban', $forum_id) || $this->auth->acl_get('a_');
 		$is_author = ($poster_id > 0 && $user_id === $poster_id);
 
 		if (!$is_mod && !$is_author)
 		{
-			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('NO_AUTH_OPERATION')], 403);
 		}
 
 		$logs_table = $this->table_prefix . 'advancedhide_logs';
@@ -437,16 +437,16 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('INVALID_REQUEST')], 400);
 		}
 
-		if (!check_form_key('advancedhide_ban'))
+		if (!check_form_key('advancedhide_ban') && !check_form_key('advancedhide_unlock'))
 		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FORM_INVALID')], 403);
 		}
 
 		$post_id         = $this->request->variable('post_id', 0);
 		$block_id        = $this->request->variable('block_id', 0);
-		$target_user_id  = $this->request->variable('user_id', 0) ?: $this->request->variable('target_user_id', 0);
+		$target_user_id  = $this->request->variable('target_user_id', 0) ?: $this->request->variable('user_id', 0);
 		$target_username = $this->request->variable('username', '', true);
-		$days            = $this->request->variable('days', 0);
+		$days            = $this->request->variable('duration_days', 0) ?: $this->request->variable('days', 0);
 		$reason          = $this->request->variable('reason', '', true);
 		$action          = $this->request->variable('action', 'ban');
 		$ban_id          = $this->request->variable('ban_id', 0);
@@ -469,7 +469,7 @@ class main_controller
 
 		if (!$is_mod && !$is_author)
 		{
-			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('NO_AUTH_OPERATION')], 403);
 		}
 
 		if ($action === 'unban' && $ban_id > 0)
