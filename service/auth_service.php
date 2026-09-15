@@ -587,6 +587,12 @@ class auth_service
 		$post_id = (int)$post_id;
 		$block_index = (int)$block_index;
 		$user_id = (int)$user_id;
+
+		if ($user_id <= 1)
+		{
+			return false;
+		}
+
 		$banned_by = (int)$banned_by;
 		$days = (int)$days;
 		$now = time();

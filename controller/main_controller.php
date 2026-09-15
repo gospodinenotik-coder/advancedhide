@@ -472,6 +472,11 @@ class main_controller
 		$action          = $this->request->variable('action', 'ban');
 		$ban_id          = $this->request->variable('ban_id', 0);
 
+		if ($action === 'ban' && $target_user_id <= 1 && $target_username === '')
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('NO_USER')], 400);
+		}
+
 		$sql = 'SELECT poster_id, forum_id, topic_id FROM ' . POSTS_TABLE . ' WHERE post_id = ' . (int)$post_id;
 		$res = $this->db->sql_query($sql);
 		$post = $this->db->sql_fetchrow($res);
