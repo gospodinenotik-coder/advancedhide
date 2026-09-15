@@ -49,6 +49,7 @@ class main_controller
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
 		$this->table_prefix = $table_prefix ?: (defined('POSTS_TABLE') ? substr(POSTS_TABLE, 0, -5) : 'phpbb_');
+		$this->language->add_lang('common', 'vendor/advancedhide');
 	}
 
 	protected function mask_password($pass)
@@ -441,10 +442,12 @@ class main_controller
 		$this->db->sql_freeresult($res_b);
 
 		return new JsonResponse([
-			'success' => true,
-			'logs'    => $entries,
-			'bans'    => $bans,
-			'can_ban' => ($is_mod || $is_author),
+			'success'        => true,
+			'logs'           => $entries,
+			'bans'           => $bans,
+			'can_ban'        => ($is_mod || $is_author),
+			'is_mod'         => (bool)$is_mod,
+			'post_author_id' => (int)$poster_id,
 		]);
 	}
 
@@ -511,6 +514,15 @@ class main_controller
 		if ($target_user_id <= 1)
 		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('NO_USER')], 400);
+		}
+
+		// Иммунитет автора: запрет на блокировку автора на его собственном сообщении
+		if ($target_user_id === $poster_id)
+		{
+			return new JsonResponse([
+				'success' => false,
+				'message' => $this->language->lang('HIDE_BAN_AUTHOR_ERROR'),
+			], 400);
 		}
 
 		$this->auth_service->add_block_ban($post_id, $block_id, $target_user_id, $current_user_id, $days, $reason);

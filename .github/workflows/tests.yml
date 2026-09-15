@@ -1,4 +1,4 @@
-﻿name: phpBB Extension Validation & CI
+name: phpBB Extension Validation & CI
 
 on: [push, pull_request]
 

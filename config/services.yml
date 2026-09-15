@@ -64,3 +64,14 @@ services:
             - '%core.table_prefix%'
         tags:
             - { name: console.command }
+
+    vendor.advancedhide.cron.tidy_logs:
+        class: vendor\advancedhide\cron\tidy_logs
+        arguments:
+            - '@config'
+            - '@dbal.conn'
+            - '%core.table_prefix%'
+        calls:
+            - [set_name, [vendor.advancedhide.cron.tidy_logs]]
+        tags:
+            - { name: cron.task }

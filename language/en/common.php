@@ -117,4 +117,7 @@ $lang = array_merge($lang, [
 	'ADVHIDE_AUDIT_CAPTCHA_ERROR'       => 'Captcha failed',
 	'ADVHIDE_AUDIT_BANNED'              => 'Banned',
 	'ADVHIDE_AUDIT_CONDITIONS_FAILED'   => 'Conditions not met',
+	'HIDE_BAN_AUTHOR_ERROR'             => 'Cannot ban the author of the post from their own hidden block.',
+	'ADVHIDE_AUTHOR'                    => 'Author',
+	'ADVHIDE_BAN_BTN'                   => 'Ban',
 ]);

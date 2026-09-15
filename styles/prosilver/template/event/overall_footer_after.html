@@ -123,7 +123,7 @@
 				</div>
 				<h4>{{ lang('ADVHIDE_LOGS_TITLE') }}</h4>
 				<table class="table1 zebra-table advhide-audit-table">
-					<thead><tr><th>Time</th><th>User</th><th>IP</th><th>Status</th><th>Count</th><th>Pass</th></tr></thead>
+					<thead><tr><th>Time</th><th>User</th><th>IP</th><th>Status</th><th>Count</th><th>Pass</th><th>Action</th></tr></thead>
 					<tbody id="advhide-audit-logs-list"></tbody>
 				</table>
 
@@ -423,6 +423,9 @@
 				$('#advhide-audit-body-content').show();
 
 				var logsHtml = '';
+				var postAuthorId = parseInt(res.post_author_id, 10) || 0;
+				var isModerator = !!res.is_mod;
+
 				if (res.logs && res.logs.length > 0) {
 					$.each(res.logs, function(i, log) {
 						var color = '#333';
@@ -433,6 +436,14 @@
 						else if (log.status_raw === 'conditions_failed') color = '#e65100';
 						else if (log.status_raw === 'captcha_failed' || log.status_raw === 'captcha_error') color = '#d84315';
 
+						var isAuthor = (log.user_id == postAuthorId);
+						var banBtnHtml = '';
+						if (isModerator && !isAuthor && log.user_id > 1) {
+							banBtnHtml = '<button type="button" class="button2 advhide-ban-trigger-btn" data-userid="' + log.user_id + '" data-username="' + log.username + '">{{ lang('ADVHIDE_BAN_BTN') }}</button>';
+						} else if (isAuthor) {
+							banBtnHtml = '<span class="advhide-badge-author">{{ lang('ADVHIDE_AUTHOR') }}</span>';
+						}
+
 						logsHtml += '<tr>' +
 							'<td>' + log.attempt_time + '</td>' +
 							'<td>' + log.username + '</td>' +
@@ -440,10 +451,11 @@
 							'<td><strong style="color:' + color + ';">' + log.status + '</strong></td>' +
 							'<td>' + log.attempt_count + '</td>' +
 							'<td><code>' + (log.masked_pass || '-') + '</code></td>' +
+							'<td>' + banBtnHtml + '</td>' +
 						'</tr>';
 					});
 				} else {
-					logsHtml = '<tr><td colspan="6" style="text-align:center;">No logs found</td></tr>';
+					logsHtml = '<tr><td colspan="7" style="text-align:center;">No logs found</td></tr>';
 				}
 				$('#advhide-audit-logs-list').html(logsHtml);
 
@@ -498,6 +510,13 @@
 				}
 			}
 		});
+	});
+
+	$(document).on('click', '.advhide-ban-trigger-btn', function(e) {
+		e.preventDefault();
+		var uName = $(this).data('username');
+		$('#advhide-ban-username').val(uName);
+		$('#advhide-ban-reason').focus();
 	});
 
 	// 6. Добавление бана пользователя (Ban)

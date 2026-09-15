@@ -120,4 +120,7 @@ $lang = array_merge($lang, [
 	'ADVHIDE_AUDIT_CAPTCHA_ERROR'       => 'Ошибка ввода капчи',
 	'ADVHIDE_AUDIT_BANNED'              => 'Заблокирован',
 	'ADVHIDE_AUDIT_CONDITIONS_FAILED'   => 'Условия не выполнены',
+	'HIDE_BAN_AUTHOR_ERROR'             => 'Невозможно заблокировать автора сообщения на его собственном скрытом блоке.',
+	'ADVHIDE_AUTHOR'                    => 'Автор',
+	'ADVHIDE_BAN_BTN'                   => 'Заблокировать',
 ]);
