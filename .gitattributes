@@ -10,3 +10,7 @@
 *.py export-ignore
 test_report*.md export-ignore
 ext*.txt export-ignore
+/phpcs.xml export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml.dist export-ignore
+/defect_backlog.json export-ignore
