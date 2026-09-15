@@ -530,6 +530,13 @@ class main_controller
 			], 400);
 		}
 
+		$flood_key = '_advhide_ban_' . (int)$current_user_id;
+		if ($this->cache->get($flood_key))
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FLOOD_ERROR')], 429);
+		}
+		$this->cache->put($flood_key, 1, 3);
+
 		$this->auth_service->add_block_ban($post_id, $block_id, $target_user_id, $current_user_id, $days, $reason);
 
 		if (function_exists('add_log'))
@@ -577,6 +584,13 @@ class main_controller
 		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
 		}
+
+		$flood_key = '_advhide_rep_' . (int)$current_user_id;
+		if ($this->cache->get($flood_key))
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FLOOD_ERROR')], 429);
+		}
+		$this->cache->put($flood_key, 1, 15);
 
 		$reports_table = $this->table_prefix . 'advancedhide_reports';
 		$sql_ary = [
@@ -640,6 +654,13 @@ class main_controller
 		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_APPEAL_SUBMITTED')], 200);
 		}
+
+		$flood_key = '_advhide_app_' . (int)$user_id;
+		if ($this->cache->get($flood_key))
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FLOOD_ERROR')], 429);
+		}
+		$this->cache->put($flood_key, 1, 15);
 
 		$sql_up = 'UPDATE ' . $bans_table . "
 			SET appeal_status = 'pending',

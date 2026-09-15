@@ -120,4 +120,5 @@ $lang = array_merge($lang, [
 	'HIDE_BAN_AUTHOR_ERROR'             => 'Cannot ban the author of the post from their own hidden block.',
 	'ADVHIDE_AUTHOR'                    => 'Author',
 	'ADVHIDE_BAN_BTN'                   => 'Ban',
+	'FLOOD_ERROR'                       => 'You cannot perform this action so soon after your last. Please wait a moment.',
 ]);

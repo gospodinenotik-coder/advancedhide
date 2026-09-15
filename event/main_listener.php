@@ -72,6 +72,11 @@ class main_listener implements EventSubscriberInterface
 
 	public function assign_common_vars($event)
 	{
+		add_form_key('advancedhide_unlock');
+		add_form_key('advancedhide_ban');
+		add_form_key('advancedhide_report');
+		add_form_key('advancedhide_appeal');
+
 		$modules = ['guest', 'posts', 'days', 'time', 'regdate', 'reply', 'thanks', 'groups', 'users', 'not_groups', 'not_users', 'pass'];
 		$now = time();
 		$token_sid = ($this->user->data['user_id'] == ANONYMOUS && !empty($this->config['form_token_sid_guests'])) ? $this->user->session_id : '';

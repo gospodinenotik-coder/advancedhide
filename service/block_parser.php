@@ -203,7 +203,8 @@ class block_parser
 			elseif ($type === 'pass')
 			{
 				$pass_counter++;
-				if ($pass_counter > 2)
+				// Внутри одного конкретного блока hide разрешен максимум 1 пароль
+				if ($pass_counter > 1)
 				{
 					$new_parts[] = 'pass_limit_exceeded';
 					continue;

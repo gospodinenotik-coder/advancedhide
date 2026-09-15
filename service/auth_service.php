@@ -31,6 +31,16 @@ class auth_service
 
 	protected static $thanks_table_exists = null;
 	protected static $user_groups_cache = [];
+	protected static $replied_cache = [];
+	protected static $thanked_cache = [];
+
+	public static function clear_runtime_cache()
+	{
+		self::$thanks_table_exists = null;
+		self::$user_groups_cache = [];
+		self::$replied_cache = [];
+		self::$thanked_cache = [];
+	}
 
 	public function __construct(config $config, user $user, auth $auth, driver_interface $db, tools_interface $db_tools, language $language, cache_interface $cache, $table_prefix, captcha_factory $captcha_factory, $phpbb_root_path, $php_ext)
 	{
@@ -493,11 +503,21 @@ class auth_service
 		{
 			return false;
 		}
-		$sql = 'SELECT 1 FROM ' . POSTS_TABLE . ' WHERE topic_id = ' . (int)$topic_id . ' AND poster_id = ' . (int)$user_id . ' AND post_visibility = 1';
-		$res = $this->db->sql_query_limit($sql, 1);
-		$row = $this->db->sql_fetchrow($res);
-		$this->db->sql_freeresult($res);
-		return !empty($row);
+
+		if (!isset(self::$replied_cache[$topic_id][$user_id]))
+		{
+			$sql = 'SELECT 1 FROM ' . POSTS_TABLE . '
+					WHERE topic_id = ' . (int)$topic_id . '
+					  AND poster_id = ' . (int)$user_id . '
+					  AND post_visibility = 1';
+			$res = $this->db->sql_query_limit($sql, 1);
+			$row = $this->db->sql_fetchrow($res);
+			$this->db->sql_freeresult($res);
+
+			self::$replied_cache[$topic_id][$user_id] = !empty($row);
+		}
+
+		return self::$replied_cache[$topic_id][$user_id];
 	}
 
 	protected function check_thanked($post_id, $user_id)
@@ -507,31 +527,38 @@ class auth_service
 			return false;
 		}
 
-		$tbl_cfg = $this->config['advancedhide_thanks_table'];
-		$tbl = !empty($tbl_cfg) ? $tbl_cfg : ($this->table_prefix . 'thanks');
-		if (!preg_match('/^[a-zA-Z0-9_]+$/', $tbl))
+		if (!isset(self::$thanked_cache[$post_id][$user_id]))
 		{
-			$tbl = $this->table_prefix . 'thanks';
+			$tbl_cfg = $this->config['advancedhide_thanks_table'];
+			$tbl = !empty($tbl_cfg) ? $tbl_cfg : ($this->table_prefix . 'thanks');
+			if (!preg_match('/^[a-zA-Z0-9_]+$/', $tbl))
+			{
+				$tbl = $this->table_prefix . 'thanks';
+			}
+
+			if (self::$thanks_table_exists === null)
+			{
+				self::$thanks_table_exists = $this->db_tools->sql_table_exists($tbl);
+			}
+
+			if (!self::$thanks_table_exists)
+			{
+				self::$thanked_cache[$post_id][$user_id] = false;
+				return false;
+			}
+
+			$sql = 'SELECT 1 FROM ' . $tbl . ' WHERE post_id = ' . (int)$post_id . ' AND user_id = ' . (int)$user_id;
+			$res = $this->db->sql_query_limit($sql, 1);
+			$row = $res ? $this->db->sql_fetchrow($res) : false;
+			if ($res)
+			{
+				$this->db->sql_freeresult($res);
+			}
+
+			self::$thanked_cache[$post_id][$user_id] = !empty($row);
 		}
 
-		if (self::$thanks_table_exists === null)
-		{
-			self::$thanks_table_exists = $this->db_tools->sql_table_exists($tbl);
-		}
-
-		if (!self::$thanks_table_exists)
-		{
-			return false;
-		}
-
-		$sql = 'SELECT 1 FROM ' . $tbl . ' WHERE post_id = ' . (int)$post_id . ' AND user_id = ' . (int)$user_id;
-		$res = $this->db->sql_query_limit($sql, 1);
-		$row = $res ? $this->db->sql_fetchrow($res) : false;
-		if ($res)
-		{
-			$this->db->sql_freeresult($res);
-		}
-		return !empty($row);
+		return self::$thanked_cache[$post_id][$user_id];
 	}
 
 	protected function check_groups($user_id, array $gids)
