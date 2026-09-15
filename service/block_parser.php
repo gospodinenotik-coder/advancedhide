@@ -203,7 +203,8 @@ class block_parser
 			elseif ($type === 'pass')
 			{
 				$pass_counter++;
-				if ($pass_counter > 2 || $total_pass_hashed >= $max_pass_hashes)
+				// Ограничение: максимум 2 пароля внутри одного блока hide
+				if ($pass_counter > 2)
 				{
 					$new_parts[] = 'pass_limit_exceeded';
 					continue;
@@ -216,6 +217,7 @@ class block_parser
 					continue;
 				}
 
+				// Если пароль уже хэширован в предыдущем проходе (BBCode/XML) — переиспользуем без инкремента счётчика
 				if (isset($pass_cache[$plain_pass]))
 				{
 					$new_parts[] = 'pass,' . $pass_cache[$plain_pass];
@@ -225,6 +227,13 @@ class block_parser
 				$info = password_get_info($plain_pass);
 				if ($info['algoName'] === 'unknown')
 				{
+					// Проверка лимита bcrypt вызывается СТРОГО перед хэшированием нового пароля
+					if ($total_pass_hashed >= $max_pass_hashes)
+					{
+						$new_parts[] = 'pass_limit_exceeded';
+						continue;
+					}
+
 					$total_pass_hashed++;
 					$hashed = password_hash($plain_pass, PASSWORD_DEFAULT);
 					$pass_cache[$plain_pass] = $hashed;
@@ -232,6 +241,7 @@ class block_parser
 				}
 				else
 				{
+					// Пароль уже является валидным хэшем
 					$new_parts[] = 'pass,' . $plain_pass;
 				}
 			}
