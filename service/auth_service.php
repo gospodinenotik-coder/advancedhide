@@ -1,5 +1,5 @@
 <?php
-namespace gospodinenotik\advancedhide\service;
+namespace vendor\advancedhide\service;
 
 if (!defined('IN_PHPBB'))
 {
@@ -33,14 +33,6 @@ class auth_service
 	protected static $user_groups_cache = [];
 	protected static $replied_cache = [];
 	protected static $thanked_cache = [];
-
-	public static function clear_runtime_cache()
-	{
-		self::$thanks_table_exists = null;
-		self::$user_groups_cache = [];
-		self::$replied_cache = [];
-		self::$thanked_cache = [];
-	}
 
 	public function __construct(config $config, user $user, auth $auth, driver_interface $db, tools_interface $db_tools, language $language, cache_interface $cache, $table_prefix, captcha_factory $captcha_factory, $phpbb_root_path, $php_ext)
 	{
@@ -80,14 +72,14 @@ class auth_service
 			return '';
 		}
 
-		$plugin_name = $this->config['captcha_plugin'] ?? '';
-		if (empty($plugin_name))
-		{
-			return '<div class="advhide-captcha-box advhide-captcha-error"><span class="error">' . htmlspecialchars($this->language->lang('CAPTCHA_SERVICE_UNAVAILABLE'), ENT_QUOTES, 'UTF-8') . '</span></div>';
-		}
-
 		try
 		{
+			$plugin_name = $this->config['captcha_plugin'] ?? '';
+			if (empty($plugin_name))
+			{
+				return '<div class="advhide-captcha-box advhide-captcha-error"><span class="error">' . htmlspecialchars($this->language->lang('CAPTCHA_SERVICE_UNAVAILABLE'), ENT_QUOTES, 'UTF-8') . '</span></div>';
+			}
+
 			$captcha = $this->captcha_factory->get_instance($plugin_name);
 			if (!$captcha->is_available())
 			{
@@ -104,7 +96,7 @@ class auth_service
 					'<label class="advhide-captcha-q"><strong>' . htmlspecialchars($q_text, ENT_QUOTES, 'UTF-8') . '</strong></label>' .
 					'<input type="hidden" name="qa_confirm_id" value="' . htmlspecialchars($c_id, ENT_QUOTES, 'UTF-8') . '" />' .
 					'<input type="text" name="qa_answer" class="inputbox autowidth advhide-captcha-input" placeholder="' . htmlspecialchars($this->language->lang('HIDE_CAPTCHA_QA_PLACEHOLDER'), ENT_QUOTES, 'UTF-8') . '" autocomplete="off" />' .
-				'</div>';
+					'</div>';
 			}
 
 			if ($captcha instanceof \phpbb\captcha\plugins\recaptcha)
@@ -113,7 +105,7 @@ class auth_service
 				return '<div class="advhide-captcha-box advhide-captcha-recaptcha">' .
 					'<script src="https://www.google.com/recaptcha/api.js" async defer></script>' .
 					'<div class="g-recaptcha" data-sitekey="' . htmlspecialchars($sitekey, ENT_QUOTES, 'UTF-8') . '"></div>' .
-				'</div>';
+					'</div>';
 			}
 
 			if ($captcha instanceof \phpbb\captcha\plugins\recaptcha_v3)
@@ -124,7 +116,7 @@ class auth_service
 					'<script src="https://www.google.com/recaptcha/api.js?render=' . urlencode($sitekey) . '"></script>' .
 					'<input type="hidden" name="g-recaptcha-response" class="advhide-g-recaptcha-v3-token" />' .
 					'<script>if (typeof grecaptcha !== "undefined") { grecaptcha.ready(function() { grecaptcha.execute(' . $safe_js_sitekey . ', {action: "advancedhide_unlock"}).then(function(token) { $(".advhide-g-recaptcha-v3-token").val(token); }); }); }</script>' .
-				'</div>';
+					'</div>';
 			}
 
 			if ($captcha instanceof \phpbb\captcha\plugins\captcha_abstract)
@@ -135,7 +127,7 @@ class auth_service
 					'<div class="advhide-captcha-img"><img src="' . $img_url . '" alt="" /></div>' .
 					'<input type="hidden" name="confirm_id" value="' . htmlspecialchars($c_id, ENT_QUOTES, 'UTF-8') . '" />' .
 					'<input type="text" name="confirm_code" class="inputbox autowidth advhide-captcha-input" placeholder="' . htmlspecialchars($this->language->lang('HIDE_CAPTCHA_CODE_PLACEHOLDER'), ENT_QUOTES, 'UTF-8') . '" autocomplete="off" />' .
-				'</div>';
+					'</div>';
 			}
 		}
 		catch (\Exception $e)
@@ -148,8 +140,7 @@ class auth_service
 
 	public function is_block_unlocked($post_id, hide_block $block)
 	{
-		$session_id = !empty($this->user->data['session_id']) ? $this->user->data['session_id'] : ($this->user->session_id ?? 'guest');
-		$cache_key = '_advhide_unlock_' . $session_id;
+		$cache_key = '_advhide_unlock_' . $this->user->data['session_id'];
 		$unlocked = $this->cache->get($cache_key) ?: [];
 
 		if (empty($unlocked[$post_id][$block->block_index]))
@@ -163,22 +154,12 @@ class auth_service
 
 	public function unlock_block($post_id, hide_block $block)
 	{
-		$session_id = !empty($this->user->data['session_id']) ? $this->user->data['session_id'] : ($this->user->session_id ?? 'guest');
-		$cache_key = '_advhide_unlock_' . $session_id;
+		$cache_key = '_advhide_unlock_' . $this->user->data['session_id'];
 		$unlocked = $this->cache->get($cache_key) ?: [];
 		$unlocked[$post_id][$block->block_index] = $block->block_hash;
 		$this->cache->put($cache_key, $unlocked, 1800);
 	}
 
-	/**
-	 * Резервирование счетчиков с компенсирующим откатом при отказе любого уровня.
-	 *
-	 * @param string $user_identity Идентификатор учетной записи (u_<id>) или сессии (s_<id>)
-	 * @param string $ip             IP-адрес клиента
-	 * @param int    $post_id        ID сообщения
-	 * @param string $block_hash     Хэш содержимого блока
-	 * @return array|false Дескриптор резервации при успехе, false при исчерпании лимита
-	 */
 	public function acquire_rate_limit($user_identity, $ip, $post_id, $block_hash)
 	{
 		$minute_window = (int) floor(time() / 60);
@@ -194,20 +175,20 @@ class auth_service
 		$ip_limit     = max(10, $minute_limit * 4);
 		$block_limit  = max(15, $minute_limit * 6);
 
-		// 1. Минутный контур пользователя (User / minute)
+		// 1. User per minute
 		if (!$this->rl_consume($key_id, $minute_window, $minute_limit))
 		{
 			return false;
 		}
 
-		// 2. Суточный контур пользователя (User / day)
+		// 2. User per day
 		if (!$this->rl_consume($key_d_id, $day_window, $day_limit))
 		{
 			$this->rl_refund($key_id, $minute_window);
 			return false;
 		}
 
-		// 3. Контур IP (IP / minute)
+		// 3. IP per minute
 		if (!$this->rl_consume($key_ip, $minute_window, $ip_limit))
 		{
 			$this->rl_refund($key_id, $minute_window);
@@ -215,7 +196,7 @@ class auth_service
 			return false;
 		}
 
-		// 4. Контур блока (Block / minute)
+		// 4. Block per minute
 		if (!$this->rl_consume($key_block, $minute_window, $block_limit))
 		{
 			$this->rl_refund($key_id, $minute_window);
@@ -240,31 +221,14 @@ class auth_service
 		];
 	}
 
-	/**
-	 * Идемпотентный возврат зарезервированного слота строго в исходные окна
-	 * с защитой от повторного вызова (single-descriptor refund guard).
-	 *
-	 * @param array $reservation Дескриптор, полученный из acquire_rate_limit
-	 */
 	public function refund_rate_limit(array &$reservation)
 	{
-		if (
-			!empty($reservation['refunded']) ||
-			!isset(
-				$reservation['minute_window'],
-				$reservation['day_window'],
-				$reservation['key_id'],
-				$reservation['key_d_id'],
-				$reservation['key_ip'],
-				$reservation['key_block']
-			)
-		)
+		if (!empty($reservation['refunded']) || !isset($reservation['minute_window'], $reservation['day_window'], $reservation['key_id'], $reservation['key_d_id'], $reservation['key_ip'], $reservation['key_block']))
 		{
 			return;
 		}
 
 		$reservation['refunded'] = true;
-
 		$this->rl_refund($reservation['key_id'], $reservation['minute_window']);
 		$this->rl_refund($reservation['key_d_id'], $reservation['day_window']);
 		$this->rl_refund($reservation['key_ip'], $reservation['minute_window']);
@@ -276,12 +240,12 @@ class auth_service
 		$table = $this->table_prefix . 'advancedhide_rl';
 		$safe_key = $this->db->sql_escape($key);
 
-		$sql = 'UPDATE ' . $table .
-			' SET rl_count = rl_count + 1' .
+		$sql = 'UPDATE ' . $table . ' SET rl_count = rl_count + 1' .
 			' WHERE rl_key = \'' . $safe_key . '\'' .
 			' AND rl_window = ' . (int) $window .
 			' AND rl_count < ' . (int) $limit;
 		$this->db->sql_query($sql);
+
 		if ($this->db->sql_affectedrows() > 0)
 		{
 			return true;
@@ -291,17 +255,18 @@ class auth_service
 		$sql = 'INSERT INTO ' . $table . ' (rl_key, rl_window, rl_count) VALUES (\'' . $safe_key . '\', ' . (int) $window . ', 1)';
 		$inserted = $this->db->sql_query($sql);
 		$this->db->sql_return_on_error(false);
+
 		if ($inserted)
 		{
 			return true;
 		}
 
-		$sql = 'UPDATE ' . $table .
-			' SET rl_count = rl_count + 1' .
+		$sql = 'UPDATE ' . $table . ' SET rl_count = rl_count + 1' .
 			' WHERE rl_key = \'' . $safe_key . '\'' .
 			' AND rl_window = ' . (int) $window .
 			' AND rl_count < ' . (int) $limit;
 		$this->db->sql_query($sql);
+
 		return $this->db->sql_affectedrows() > 0;
 	}
 
@@ -310,8 +275,7 @@ class auth_service
 		$table = $this->table_prefix . 'advancedhide_rl';
 		$safe_key = $this->db->sql_escape($key);
 
-		$sql = 'UPDATE ' . $table .
-			' SET rl_count = rl_count - 1' .
+		$sql = 'UPDATE ' . $table . ' SET rl_count = rl_count - 1' .
 			' WHERE rl_key = \'' . $safe_key . '\'' .
 			' AND rl_window = ' . (int) $window .
 			' AND rl_count > 0';
@@ -340,23 +304,6 @@ class auth_service
 		if ($mod_override)
 		{
 			return ['can_view' => true, 'failed_conditions' => [], 'override' => 'mod', 'has_disabled_module' => false];
-		}
-
-		if ($post_id > 0 && $viewer_id > 0)
-		{
-			$ban_info = $this->get_user_block_ban($post_id, $block->block_index, $viewer_id);
-			if ($ban_info !== null)
-			{
-				$reason_text = !empty($ban_info['ban_reason']) ? $this->language->lang('HIDE_BANNED_WITH_REASON', $ban_info['ban_reason']) : $this->language->lang('HIDE_BANNED_FROM_BLOCK');
-				return [
-					'can_view'            => false,
-					'failed_conditions'   => [$reason_text],
-					'override'            => false,
-					'has_disabled_module' => false,
-					'is_banned'           => true,
-					'ban_info'            => $ban_info,
-				];
-			}
 		}
 
 		if ($this->config['advancedhide_author_override'] && $poster_id > 0 && $viewer_id === $poster_id && $is_registered)
@@ -391,6 +338,7 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_GUEST_FAILED');
 					}
 					break;
+
 				case 'posts':
 					$req = (int)($args[0] ?? 0);
 					if (!$is_registered || (int)$this->user->data['user_posts'] < $req)
@@ -399,6 +347,7 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_POSTS_FAILED', $req, (int)$this->user->data['user_posts']);
 					}
 					break;
+
 				case 'days':
 					$req = (int)($args[0] ?? 0);
 					$user_days = floor(($now - (int)$this->user->data['user_regdate']) / 86400);
@@ -408,6 +357,7 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_DAYS_FAILED', $req, max(0, $user_days));
 					}
 					break;
+
 				case 'regdate':
 					$target_ts = strtotime(($args[0] ?? '') . ' 23:59:59 UTC');
 					if (!$is_registered || $target_ts === false || (int)$this->user->data['user_regdate'] > $target_ts)
@@ -416,6 +366,7 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_REGDATE_FAILED', $args[0] ?? '');
 					}
 					break;
+
 				case 'time':
 					$time_arg = implode(',', $args);
 					$target_ts = is_numeric($time_arg) ? (int)$time_arg : strtotime($time_arg . ' UTC');
@@ -425,6 +376,7 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_TIME_FAILED', date('Y-m-d H:i:s UTC', $target_ts ?: 0));
 					}
 					break;
+
 				case 'reply':
 					if (!$is_registered || !$this->check_replied($topic_id, $viewer_id))
 					{
@@ -432,6 +384,7 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_REPLY_FAILED');
 					}
 					break;
+
 				case 'thanks':
 					if (!$is_registered || !$this->check_thanked($post_id, $viewer_id))
 					{
@@ -439,6 +392,7 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_THANKS_FAILED');
 					}
 					break;
+
 				case 'groups':
 					$gids = array_map('intval', $args);
 					if (!$is_registered || !$this->check_groups($viewer_id, $gids))
@@ -447,6 +401,7 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_GROUPS_FAILED');
 					}
 					break;
+
 				case 'users':
 					$uids = array_map('intval', $args);
 					if (!$is_registered || !in_array($viewer_id, $uids, true))
@@ -455,22 +410,7 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_USERS_FAILED');
 					}
 					break;
-				case 'not_groups':
-					$gids = array_map('intval', $args);
-					if ($is_registered && $this->check_groups($viewer_id, $gids))
-					{
-						$can_view = false;
-						$failed_conditions[] = $this->language->lang('HIDE_COND_NOT_GROUPS_FAILED');
-					}
-					break;
-				case 'not_users':
-					$uids = array_map('intval', $args);
-					if ($is_registered && in_array($viewer_id, $uids, true))
-					{
-						$can_view = false;
-						$failed_conditions[] = $this->language->lang('HIDE_COND_NOT_USERS_FAILED');
-					}
-					break;
+
 				case 'pass':
 					if (!$password_verified && !$this->is_block_unlocked($post_id, $block))
 					{
@@ -478,10 +418,12 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_PASS_REQUIRED');
 					}
 					break;
+
 				case 'pass_limit_exceeded':
 					$can_view = false;
 					$failed_conditions[] = $this->language->lang('HIDE_PASS_LIMIT_EXCEEDED');
 					break;
+
 				default:
 					$can_view = false;
 					$failed_conditions[] = $this->language->lang('HIDE_COND_UNKNOWN');
@@ -504,20 +446,19 @@ class auth_service
 			return false;
 		}
 
-		if (!isset(self::$replied_cache[$topic_id][$user_id]))
+		$cache_key = (int)$topic_id . '_' . (int)$user_id;
+		if (isset(self::$replied_cache[$cache_key]))
 		{
-			$sql = 'SELECT 1 FROM ' . POSTS_TABLE . '
-					WHERE topic_id = ' . (int)$topic_id . '
-					  AND poster_id = ' . (int)$user_id . '
-					  AND post_visibility = 1';
-			$res = $this->db->sql_query_limit($sql, 1);
-			$row = $this->db->sql_fetchrow($res);
-			$this->db->sql_freeresult($res);
-
-			self::$replied_cache[$topic_id][$user_id] = !empty($row);
+			return self::$replied_cache[$cache_key];
 		}
 
-		return self::$replied_cache[$topic_id][$user_id];
+		$sql = 'SELECT 1 FROM ' . POSTS_TABLE . ' WHERE topic_id = ' . (int)$topic_id . ' AND poster_id = ' . (int)$user_id . ' AND post_visibility = 1';
+		$res = $this->db->sql_query_limit($sql, 1);
+		$row = $this->db->sql_fetchrow($res);
+		$this->db->sql_freeresult($res);
+
+		self::$replied_cache[$cache_key] = !empty($row);
+		return self::$replied_cache[$cache_key];
 	}
 
 	protected function check_thanked($post_id, $user_id)
@@ -527,50 +468,56 @@ class auth_service
 			return false;
 		}
 
-		if (!isset(self::$thanked_cache[$post_id][$user_id]))
+		$cache_key = (int)$post_id . '_' . (int)$user_id;
+		if (isset(self::$thanked_cache[$cache_key]))
 		{
-			$tbl_cfg = $this->config['advancedhide_thanks_table'];
-			$tbl = !empty($tbl_cfg) ? $tbl_cfg : ($this->table_prefix . 'thanks');
-			if (!preg_match('/^[a-zA-Z0-9_]+$/', $tbl))
-			{
-				$tbl = $this->table_prefix . 'thanks';
-			}
-
-			if (self::$thanks_table_exists === null)
-			{
-				self::$thanks_table_exists = $this->db_tools->sql_table_exists($tbl);
-			}
-
-			if (!self::$thanks_table_exists)
-			{
-				self::$thanked_cache[$post_id][$user_id] = false;
-				return false;
-			}
-
-			$sql = 'SELECT 1 FROM ' . $tbl . ' WHERE post_id = ' . (int)$post_id . ' AND user_id = ' . (int)$user_id;
-			$res = $this->db->sql_query_limit($sql, 1);
-			$row = $res ? $this->db->sql_fetchrow($res) : false;
-			if ($res)
-			{
-				$this->db->sql_freeresult($res);
-			}
-
-			self::$thanked_cache[$post_id][$user_id] = !empty($row);
+			return self::$thanked_cache[$cache_key];
 		}
 
-		return self::$thanked_cache[$post_id][$user_id];
+		$tbl_cfg = $this->config['advancedhide_thanks_table'];
+		$tbl = !empty($tbl_cfg) ? $tbl_cfg : ($this->table_prefix . 'thanks');
+		if (!preg_match('/^[a-zA-Z0-9_]+$/', $tbl))
+		{
+			$tbl = $this->table_prefix . 'thanks';
+		}
+
+		if (self::$thanks_table_exists === null)
+		{
+			self::$thanks_table_exists = $this->db_tools->sql_table_exists($tbl);
+		}
+
+		if (!self::$thanks_table_exists)
+		{
+			return false;
+		}
+
+		$sql = 'SELECT 1 FROM ' . $tbl . ' WHERE post_id = ' . (int)$post_id . ' AND user_id = ' . (int)$user_id;
+		$res = $this->db->sql_query_limit($sql, 1);
+		$row = $res ? $this->db->sql_fetchrow($res) : false;
+		if ($res)
+		{
+			$this->db->sql_freeresult($res);
+		}
+
+		self::$thanked_cache[$cache_key] = !empty($row);
+		return self::$thanked_cache[$cache_key];
 	}
 
 	protected function check_groups($user_id, array $gids)
 	{
-		if ($user_id <= 0)
+		if ($user_id <= 0 || empty($gids))
 		{
 			return false;
 		}
 
 		if (!isset(self::$user_groups_cache[$user_id]))
 		{
-			$user_gids = ($user_id === (int)$this->user->data['user_id']) ? [(int)$this->user->data['group_id']] : [];
+			$user_gids = [];
+			if ($user_id === (int)$this->user->data['user_id'] && !empty($this->user->data['group_id']))
+			{
+				$user_gids[] = (int)$this->user->data['group_id'];
+			}
+
 			$sql = 'SELECT group_id FROM ' . USER_GROUP_TABLE . ' WHERE user_id = ' . (int)$user_id . ' AND user_pending = 0';
 			$res = $this->db->sql_query($sql);
 			while ($row = $this->db->sql_fetchrow($res))
@@ -578,77 +525,10 @@ class auth_service
 				$user_gids[] = (int)$row['group_id'];
 			}
 			$this->db->sql_freeresult($res);
+
 			self::$user_groups_cache[$user_id] = array_unique($user_gids);
 		}
 
 		return (bool)array_intersect($gids, self::$user_groups_cache[$user_id]);
-	}
-
-	public function get_user_block_ban($post_id, $block_index, $user_id)
-	{
-		$post_id = (int)$post_id;
-		$block_index = (int)$block_index;
-		$user_id = (int)$user_id;
-
-		if ($post_id <= 0 || $user_id <= 0)
-		{
-			return null;
-		}
-
-		$table = $this->table_prefix . 'advancedhide_bans';
-		$now = time();
-		$sql = 'SELECT * FROM ' . $table . '
-			WHERE post_id = ' . $post_id . '
-				AND block_index = ' . $block_index . '
-				AND user_id = ' . $user_id . '
-				AND (ban_end = 0 OR ban_end > ' . $now . ')';
-		$result = $this->db->sql_query_limit($sql, 1);
-		$ban = $this->db->sql_fetchrow($result);
-		$this->db->sql_freeresult($result);
-
-		return $ban ?: null;
-	}
-
-	public function add_block_ban($post_id, $block_index, $user_id, $banned_by, $days = 0, $reason = '')
-	{
-		$post_id = (int)$post_id;
-		$block_index = (int)$block_index;
-		$user_id = (int)$user_id;
-
-		if ($user_id <= 1)
-		{
-			return false;
-		}
-
-		$banned_by = (int)$banned_by;
-		$days = (int)$days;
-		$now = time();
-		$ban_end = $days > 0 ? ($now + $days * 86400) : 0;
-
-		$table = $this->table_prefix . 'advancedhide_bans';
-		$sql = 'DELETE FROM ' . $table . '
-			WHERE post_id = ' . $post_id . ' AND block_index = ' . $block_index . ' AND user_id = ' . $user_id;
-		$this->db->sql_query($sql);
-
-		$sql_ary = [
-			'post_id'     => $post_id,
-			'block_index' => $block_index,
-			'user_id'     => $user_id,
-			'banned_by'   => $banned_by,
-			'ban_start'   => $now,
-			'ban_end'     => $ban_end,
-			'ban_reason'  => (string)$reason,
-		];
-		$this->db->sql_query('INSERT INTO ' . $table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
-
-		return (int)$this->db->sql_nextid();
-	}
-
-	public function remove_block_ban($ban_id)
-	{
-		$table = $this->table_prefix . 'advancedhide_bans';
-		$sql = 'DELETE FROM ' . $table . ' WHERE ban_id = ' . (int)$ban_id;
-		$this->db->sql_query($sql);
-		return $this->db->sql_affectedrows() > 0;
 	}
 }

@@ -1,5 +1,5 @@
 <?php
-namespace gospodinenotik\advancedhide\event;
+namespace vendor\advancedhide\event;
 
 if (!defined('IN_PHPBB'))
 {
@@ -14,8 +14,8 @@ use phpbb\template\template;
 use phpbb\request\request_interface;
 use phpbb\language\language;
 use phpbb\db\driver\driver_interface;
-use gospodinenotik\advancedhide\service\block_parser;
-use gospodinenotik\advancedhide\service\auth_service;
+use vendor\advancedhide\service\block_parser;
+use vendor\advancedhide\service\auth_service;
 use s9e\TextFormatter\Configurator\Items\AttributeFilters\RegexpFilter;
 
 class main_listener implements EventSubscriberInterface
@@ -66,36 +66,17 @@ class main_listener implements EventSubscriberInterface
 
 	public function load_language($event)
 	{
-		$this->language->add_lang('common', 'gospodinenotik/advancedhide');
-		$this->language->add_lang('permissions_advancedhide', 'gospodinenotik/advancedhide');
+		$this->language->add_lang('common', 'vendor/advancedhide');
 	}
 
 	public function assign_common_vars($event)
 	{
 		add_form_key('advancedhide_unlock');
-		add_form_key('advancedhide_ban');
-		add_form_key('advancedhide_report');
-		add_form_key('advancedhide_appeal');
 
-		$modules = ['guest', 'posts', 'days', 'time', 'regdate', 'reply', 'thanks', 'groups', 'users', 'not_groups', 'not_users', 'pass'];
-		$now = time();
-		$token_sid = ($this->user->data['user_id'] == ANONYMOUS && !empty($this->config['form_token_sid_guests'])) ? $this->user->session_id : '';
-
+		$modules = ['guest', 'posts', 'days', 'time', 'regdate', 'reply', 'thanks', 'groups', 'users', 'pass'];
 		$vars = [
 			'U_ADVANCEDHIDE_UNLOCK'   => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/unlock'),
-			'U_ADVANCEDHIDE_AUDIT'    => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/audit'),
-			'U_ADVANCEDHIDE_BAN'      => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/ban'),
-			'U_ADVANCEDHIDE_REPORT'   => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/report'),
-			'U_ADVANCEDHIDE_APPEAL'   => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/appeal'),
 			'S_ADVHIDE_SHOW_BUTTONS'  => (bool)($this->config['advancedhide_show_buttons'] ?? 1),
-			'S_ADVHIDE_CAN_USE'       => (bool)$this->auth->acl_get('u_hide_use'),
-			'S_ADVHIDE_CAN_PASS'      => (bool)$this->auth->acl_get('u_hide_pass'),
-			'ADVHIDE_TOKEN_UNLOCK'    => sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_unlock' . $token_sid),
-			'ADVHIDE_TOKEN_AUDIT'     => sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_audit' . $token_sid),
-			'ADVHIDE_TOKEN_BAN'       => sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_ban' . $token_sid),
-			'ADVHIDE_TOKEN_REPORT'    => sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_report' . $token_sid),
-			'ADVHIDE_TOKEN_APPEAL'    => sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_appeal' . $token_sid),
-			'ADVHIDE_TOKEN_TIME'      => (int)$now,
 		];
 
 		foreach ($modules as $m)
@@ -109,13 +90,11 @@ class main_listener implements EventSubscriberInterface
 
 	public function register_permissions($event)
 	{
-		$this->language->add_lang('permissions_advancedhide', 'gospodinenotik/advancedhide');
 		$permissions = $event['permissions'];
-		$permissions['m_hide_override'] = ['lang' => 'ACL_M_HIDE_OVERRIDE', 'cat' => 'misc'];
-		$permissions['m_hide_ban']      = ['lang' => 'ACL_M_HIDE_BAN',      'cat' => 'post_actions'];
-		$permissions['u_hide_use']      = ['lang' => 'ACL_U_HIDE_USE',      'cat' => 'post'];
-		$permissions['u_hide_pass']     = ['lang' => 'ACL_U_HIDE_PASS',     'cat' => 'post'];
-		$permissions['f_hide_post']     = ['lang' => 'ACL_F_HIDE_POST',     'cat' => 'post'];
+		$permissions['m_hide_override'] = [
+			'lang' => 'ACL_M_HIDE_OVERRIDE',
+			'cat'  => 'misc',
+		];
 		$event['permissions'] = $permissions;
 	}
 
@@ -129,22 +108,18 @@ class main_listener implements EventSubscriberInterface
 
 		$tag = $configurator->tags->add('HIDE');
 		$tag->attributes->add('hide')->defaultValue = 'guest';
-
 		$filter = new RegexpFilter('/^[a-zA-Z0-9_,;:\/\$\.\-\+ ]*$/D');
 		$tag->attributes['hide']->filterChain->append($filter);
 		$tag->nestingLimit = 1;
-
 		$tag->template = '<hide cond="{@hide}"><xsl:apply-templates/></hide>';
 
-		$configurator->BBCodes->addCustom(
+		$bbcode = $configurator->BBCodes->addCustom(
 			'[hide={TEXT1?}]{TEXT2}[/hide]',
 			'<hide cond="{@hide}"><xsl:apply-templates/></hide>'
 		);
+		$bbcode->defaultAttribute = 'hide';
 	}
 
-	/**
-	 * Валидация прав доступа и количества парольных блоков при сохранении поста
-	 */
 	public function validate_post_passwords($event)
 	{
 		$post_data = $event['post_data'];
@@ -155,18 +130,6 @@ class main_listener implements EventSubscriberInterface
 			return;
 		}
 
-		$forum_id = (int)($post_data['forum_id'] ?? $this->request->variable('f', 0));
-		$error = $event['error'];
-
-		// Проверка права на использование [hide]
-		if (!$this->auth->acl_get('u_hide_use') || ($forum_id > 0 && !$this->auth->acl_get('f_hide_post', $forum_id) && !$this->auth->acl_get('a_')))
-		{
-			$error[] = $this->language->lang('HIDE_NO_POST_AUTH');
-			$event['error'] = $error;
-			return;
-		}
-
-		// Исключаем примеры BBCode внутри [code], чтобы они не засчитывались в лимит
 		$clean_message = preg_replace('/\[code(?:=[^\]]*)?\].*?\[\/code\]/is', '', $message);
 		$blocks = $this->parser->parse_blocks($clean_message);
 		$pass_count = 0;
@@ -178,18 +141,12 @@ class main_listener implements EventSubscriberInterface
 			}
 		}
 
-		// Проверка права на установку паролей
-		if ($pass_count > 0 && !$this->auth->acl_get('u_hide_pass'))
-		{
-			$error[] = $this->language->lang('HIDE_NO_PASS_AUTH');
-		}
-
 		if ($pass_count > 3)
 		{
+			$error = $event['error'];
 			$error[] = $this->language->lang('HIDE_ERROR_TOO_MANY_PASSWORDS');
+			$event['error'] = $error;
 		}
-
-		$event['error'] = $error;
 	}
 
 	public function canonicalize_on_storage($event)
@@ -219,9 +176,11 @@ class main_listener implements EventSubscriberInterface
 
 	public function process_post_hide($event)
 	{
-		$post_row = $event['post_row'];
-		$row      = $event['row'];
-		$text     = $post_row['MESSAGE'];
+		$post_row    = $event['post_row'];
+		$row         = $event['row'];
+		$text        = $post_row['MESSAGE'];
+		$attachments = isset($event['attachments']) ? $event['attachments'] : [];
+		$post_id     = (int)$row['post_id'];
 
 		if (stripos($text, '<hide') === false)
 		{
@@ -241,29 +200,22 @@ class main_listener implements EventSubscriberInterface
 			return;
 		}
 
-		$forum_id  = (int)$row['forum_id'];
-		$poster_id = (int)($event['poster_id'] ?? $row['user_id'] ?? $row['poster_id'] ?? 0);
-		$viewer_id = (int)$this->user->data['user_id'];
-		$is_mod    = $this->auth->acl_get('m_hide_override', $forum_id) || $this->auth->acl_get('m_hide_ban', $forum_id);
-		$is_author = ($poster_id > 0 && $viewer_id === $poster_id);
-
 		$context = [
-			'forum_id'  => $forum_id,
+			'forum_id'  => (int)$row['forum_id'],
 			'topic_id'  => (int)$row['topic_id'],
-			'post_id'   => (int)$row['post_id'],
-			'poster_id' => $poster_id,
+			'post_id'   => $post_id,
+			'poster_id' => (int)($event['poster_id'] ?? $row['user_id'] ?? $row['poster_id'] ?? 0),
 		];
 
 		$now = time();
 		$token_sid = ($this->user->data['user_id'] == ANONYMOUS && !empty($this->config['form_token_sid_guests'])) ? $this->user->session_id : '';
 		$form_token = sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_unlock' . $token_sid);
 
-		$locked_attachment_ids = [];
-		$locked_attachment_names = [];
 		$idx = 0;
-		$processed = preg_replace_callback('/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now, $is_mod, $is_author, $viewer_id, &$locked_attachment_ids, &$locked_attachment_names) {
-			$idx++;
+		$has_locked_attachments = false;
 
+		$processed = preg_replace_callback('/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now, &$has_locked_attachments, &$attachments, $post_id) {
+			$idx++;
 			if (!isset($blocks[$idx - 1]))
 			{
 				return '<div class="advancedhide-box hide-locked"><div class="hide-header"><i class="fa fa-exclamation-triangle"></i> ' . htmlspecialchars($this->language->lang('HIDE_LIMIT_EXCEEDED'), ENT_QUOTES, 'UTF-8') . '</div></div>';
@@ -271,12 +223,6 @@ class main_listener implements EventSubscriberInterface
 
 			$block = $blocks[$idx - 1];
 			$eval = $this->auth_service->evaluate_block($block, $context);
-
-			$audit_btn = '';
-			if ($is_mod || $is_author)
-			{
-				$audit_btn = ' <button type="button" class="advhide-btn-icon advhide-btn-audit" data-postid="' . $context['post_id'] . '" data-blockid="' . $block->block_index . '" title="' . htmlspecialchars($this->language->lang('ADVHIDE_BTN_AUDIT'), ENT_QUOTES, 'UTF-8') . '"><i class="fa fa-shield"></i></button>';
-			}
 
 			if ($eval['can_view'])
 			{
@@ -290,50 +236,23 @@ class main_listener implements EventSubscriberInterface
 					$badge = '<span class="hide-override-badge author">' . htmlspecialchars($this->language->lang('HIDE_OVERRIDE_AUTHOR'), ENT_QUOTES, 'UTF-8') . '</span>';
 				}
 
-				return '<div class="advancedhide-box hide-unlocked" id="hide-' . $context['post_id'] . '-' . $block->block_index . '">' .
-					'<div class="hide-header"><i class="fa fa-unlock-alt"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_UNLOCKED'), ENT_QUOTES, 'UTF-8') . ' ' . $badge . $audit_btn . '</div>' .
+				return '<div class="advancedhide-box hide-unlocked">' .
+					'<div class="hide-header"><i class="fa fa-unlock-alt"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_UNLOCKED'), ENT_QUOTES, 'UTF-8') . ' ' . $badge . '</div>' .
 					'<div class="hide-content">' . $m[2] . '</div>' .
-				'</div>';
+					'</div>';
 			}
 
-			// Блок заблокирован - защищаем вложения
-			if (preg_match_all('/\[attachment=(\d+)(?::[^\]]*)?\](.*?)(?:\[\/attachment(?::[^\]]*)?\])?/is', $block->content, $att_m))
+			// Block is locked: neutralize any attachments placed inside this block
+			if (!empty($attachments[$post_id]))
 			{
-				foreach ($att_m[1] as $aid)
+				preg_match_all('/\[attachment=(\d+)(?::[a-zA-Z0-9_-]+)?\]/i', $block->content, $att_matches);
+				if (!empty($att_matches[1]))
 				{
-					$locked_attachment_ids[] = (int)$aid;
-				}
-				foreach ($att_m[2] as $aname)
-				{
-					$tname = trim(strip_tags($aname));
-					if ($tname !== '')
+					foreach ($att_matches[1] as $att_index)
 					{
-						$locked_attachment_names[] = strtolower($tname);
+						unset($attachments[$post_id][(int)$att_index]);
+						$has_locked_attachments = true;
 					}
-				}
-			}
-
-			if (preg_match_all('#<!-- ia(\d+) -->([^<]+)<!-- ia\1 -->#i', $m[2], $ia_m))
-			{
-				foreach ($ia_m[1] as $aid)
-				{
-					$locked_attachment_ids[] = (int)$aid;
-				}
-				foreach ($ia_m[2] as $aname)
-				{
-					$tname = trim(strip_tags($aname));
-					if ($tname !== '')
-					{
-						$locked_attachment_names[] = strtolower($tname);
-					}
-				}
-			}
-
-			if (preg_match_all('/\b([\w\.\-]+\.(?:zip|rar|7z|tar|gz|pdf|txt|docx?|xlsx?|png|jpe?g|gif))\b/i', $block->content . ' ' . $m[2], $fn_m))
-			{
-				foreach ($fn_m[1] as $fn)
-				{
-					$locked_attachment_names[] = strtolower(trim($fn));
 				}
 			}
 
@@ -347,9 +266,9 @@ class main_listener implements EventSubscriberInterface
 				$reasons_html .= '</ul>';
 
 				return '<div class="advancedhide-box hide-locked hide-disabled" id="hide-' . $context['post_id'] . '-' . $block->block_index . '">' .
-					'<div class="hide-header"><i class="fa fa-pause-circle"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_DISABLED'), ENT_QUOTES, 'UTF-8') . $audit_btn . '</div>' .
+					'<div class="hide-header"><i class="fa fa-pause-circle"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_DISABLED'), ENT_QUOTES, 'UTF-8') . '</div>' .
 					'<div class="hide-body">' . $reasons_html . '</div>' .
-				'</div>';
+					'</div>';
 			}
 
 			$reasons_html = '';
@@ -363,127 +282,39 @@ class main_listener implements EventSubscriberInterface
 				$reasons_html .= '</ul>';
 			}
 
-			// Если пользователь персонально забанен на этот блок
-			if (!empty($eval['is_banned']))
-			{
-				$appeal_btn = ($viewer_id > 1) ? '<div class="advhide-action-bar"><button type="button" class="button2 advhide-btn-appeal" data-postid="' . $context['post_id'] . '" data-blockid="' . $block->block_index . '"><i class="fa fa-envelope-o"></i> ' . htmlspecialchars($this->language->lang('ADVHIDE_APPEAL_BTN'), ENT_QUOTES, 'UTF-8') . '</button></div>' : '';
-
-				return '<div class="advancedhide-box hide-locked hide-banned" id="hide-' . $context['post_id'] . '-' . $block->block_index . '">' .
-					'<div class="hide-header"><i class="fa fa-ban"></i> ' . htmlspecialchars($this->language->lang('ADVHIDE_STATUS_BANNED'), ENT_QUOTES, 'UTF-8') . $audit_btn . '</div>' .
-					'<div class="hide-body">' . $reasons_html . $appeal_btn . '</div>' .
-				'</div>';
-			}
-
 			$pass_form = '';
 			if ($block->has_password && $this->auth_service->is_module_enabled('pass'))
 			{
 				$captcha_html = $this->auth_service->generate_captcha_html();
-				$report_btn = ($viewer_id > 1) ? ' <button type="button" class="advhide-btn-icon advhide-btn-report" data-postid="' . $context['post_id'] . '" data-blockid="' . $block->block_index . '" title="' . htmlspecialchars($this->language->lang('ADVHIDE_BTN_REPORT'), ENT_QUOTES, 'UTF-8') . '"><i class="fa fa-flag"></i></button>' : '';
-
 				$pass_form = '<div class="hide-pass-form" data-postid="' . $context['post_id'] . '" data-blockid="' . $block->block_index . '">' .
 					'<input type="hidden" class="hide-token" name="form_token" value="' . htmlspecialchars($form_token, ENT_QUOTES, 'UTF-8') . '" />' .
 					'<input type="hidden" class="hide-creation-time" name="creation_time" value="' . (int)$now . '" />' .
 					'<div class="hide-pass-row">' .
-						'<input type="password" class="inputbox autowidth hide-pass-input" placeholder="' . htmlspecialchars($this->language->lang('HIDE_PASS_PLACEHOLDER'), ENT_QUOTES, 'UTF-8') . '" /> ' .
-						'<button type="button" class="button2 hide-pass-submit">' . htmlspecialchars($this->language->lang('HIDE_PASS_SUBMIT'), ENT_QUOTES, 'UTF-8') . '</button>' .
-						$report_btn .
+					'<input type="password" class="inputbox autowidth hide-pass-input" placeholder="' . htmlspecialchars($this->language->lang('HIDE_PASS_PLACEHOLDER'), ENT_QUOTES, 'UTF-8') . '" /> ' .
+					'<button type="button" class="button2 hide-pass-submit">' . htmlspecialchars($this->language->lang('HIDE_PASS_SUBMIT'), ENT_QUOTES, 'UTF-8') . '</button>' .
 					'</div>' .
 					'<div class="hide-captcha-slot">' . $captcha_html . '</div>' .
 					'<span class="hide-pass-msg"></span>' .
-				'</div>';
+					'</div>';
 			}
 
 			return '<div class="advancedhide-box hide-locked" id="hide-' . $context['post_id'] . '-' . $block->block_index . '">' .
-				'<div class="hide-header"><i class="fa fa-lock"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_LOCKED'), ENT_QUOTES, 'UTF-8') . $audit_btn . '</div>' .
+				'<div class="hide-header"><i class="fa fa-lock"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_LOCKED'), ENT_QUOTES, 'UTF-8') . '</div>' .
 				'<div class="hide-body">' . $reasons_html . $pass_form . '</div>' .
-			'</div>';
+				'</div>';
 		}, $text);
 
-		// Устранение утечки вложений из закрытых блоков
-		$attachments = isset($event['attachments']) && is_array($event['attachments']) ? $event['attachments'] : [];
-		$post_id = (int)$row['post_id'];
+		$post_row['MESSAGE'] = $processed;
 
-		if ((!empty($locked_attachment_ids) || !empty($locked_attachment_names)) && !empty($attachments[$post_id]) && is_array($attachments[$post_id]))
+		if ($has_locked_attachments)
 		{
-			foreach ($attachments[$post_id] as $k => $att)
-			{
-				$should_unset = false;
-				if (in_array($k, $locked_attachment_ids, true))
-				{
-					$should_unset = true;
-				}
-				elseif (is_array($att))
-				{
-					if (isset($att['attach_id']) && in_array((int)$att['attach_id'], $locked_attachment_ids, true))
-					{
-						$should_unset = true;
-					}
-					elseif (isset($att['real_filename']) && in_array(strtolower($att['real_filename']), $locked_attachment_names, true))
-					{
-						$should_unset = true;
-					}
-				}
-				elseif (is_string($att))
-				{
-					$att_lower = strtolower($att);
-					foreach ($locked_attachment_names as $fname)
-					{
-						if (strpos($att_lower, $fname) !== false)
-						{
-							$should_unset = true;
-							break;
-						}
-					}
-					if (!$should_unset)
-					{
-						foreach ($locked_attachment_ids as $aid)
-						{
-							if (strpos($att, 'id=' . $aid) !== false)
-							{
-								$should_unset = true;
-								break;
-							}
-						}
-					}
-				}
-
-				if ($should_unset)
-				{
-					unset($attachments[$post_id][$k]);
-				}
-			}
-
 			if (empty($attachments[$post_id]))
 			{
 				$post_row['S_HAS_ATTACHMENTS'] = false;
-				$post_row['S_MULTIPLE_ATTACHMENTS'] = false;
 			}
-			else
-			{
-				$post_row['S_HAS_ATTACHMENTS'] = true;
-				$post_row['S_MULTIPLE_ATTACHMENTS'] = (count($attachments[$post_id]) > 1);
-			}
-
 			$event['attachments'] = $attachments;
 		}
 
-		if (!empty($locked_attachment_ids) && isset($post_row['ATTACHMENTS']) && is_array($post_row['ATTACHMENTS']))
-		{
-			foreach ($post_row['ATTACHMENTS'] as $k => $att)
-			{
-				if (is_array($att) && isset($att['ATTACH_ID']) && in_array((int)$att['ATTACH_ID'], $locked_attachment_ids, true))
-				{
-					unset($post_row['ATTACHMENTS'][$k]);
-				}
-			}
-			if (empty($post_row['ATTACHMENTS']))
-			{
-				$post_row['S_HAS_ATTACHMENTS'] = false;
-				$post_row['S_MULTIPLE_ATTACHMENTS'] = false;
-			}
-		}
-
-		$post_row['MESSAGE'] = $processed;
 		$event['post_row'] = $post_row;
 	}
 
@@ -505,8 +336,8 @@ class main_listener implements EventSubscriberInterface
 					'[hide]' . $this->language->lang('HIDE_CONTENT_PROTECTED') . '[/hide]',
 					$page_data['MESSAGE']
 				);
-				$event['page_data'] = $page_data;
 			}
+			$event['page_data'] = $page_data;
 		}
 
 		if (!empty($event['preview']))
@@ -631,8 +462,8 @@ class main_listener implements EventSubscriberInterface
 	{
 		$feed = $event['feed'];
 		$row = $event['row'];
-
 		$text_key = $feed->get('text');
+
 		if ($text_key === null || empty($row[$text_key]) || empty($row['post_id']))
 		{
 			return;

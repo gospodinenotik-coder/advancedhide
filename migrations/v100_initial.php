@@ -1,5 +1,5 @@
 <?php
-namespace gospodinenotik\advancedhide\migrations;
+namespace vendor\advancedhide\migrations;
 
 if (!defined('IN_PHPBB'))
 {
@@ -46,8 +46,6 @@ class v100_initial extends \phpbb\db\migration\migration
 			['config.add', ['advancedhide_enable_captcha', 0]],
 			['config.add', ['advancedhide_rl_minute_limit', 5]],
 			['config.add', ['advancedhide_rl_day_limit', 30]],
-
-			// Статусы модулей (1 - включен, 0 - отключен)
 			['config.add', ['advancedhide_mod_guest', 1]],
 			['config.add', ['advancedhide_mod_posts', 1]],
 			['config.add', ['advancedhide_mod_days', 1]],
@@ -58,8 +56,6 @@ class v100_initial extends \phpbb\db\migration\migration
 			['config.add', ['advancedhide_mod_groups', 1]],
 			['config.add', ['advancedhide_mod_users', 1]],
 			['config.add', ['advancedhide_mod_pass', 1]],
-
-			// Иконки кнопок BBCode редактора (FontAwesome)
 			['config.add', ['advancedhide_icon_guest', 'fa-eye-slash']],
 			['config.add', ['advancedhide_icon_posts', 'fa-comments']],
 			['config.add', ['advancedhide_icon_days', 'fa-calendar']],
@@ -70,7 +66,6 @@ class v100_initial extends \phpbb\db\migration\migration
 			['config.add', ['advancedhide_icon_groups', 'fa-users']],
 			['config.add', ['advancedhide_icon_users', 'fa-user']],
 			['config.add', ['advancedhide_icon_pass', 'fa-key']],
-
 			['permission.add', ['m_hide_override', false]],
 			['permission.permission_set', ['ROLE_MOD_FULL', 'm_hide_override']],
 			['permission.permission_set', ['ROLE_ADMIN_FULL', 'm_hide_override']],
@@ -83,9 +78,9 @@ class v100_initial extends \phpbb\db\migration\migration
 				'acp',
 				'ACP_ADVANCEDHIDE_TITLE',
 				[
-					'module_basename' => '\gospodinenotik\advancedhide\acp\main_module',
+					'module_basename' => '\vendor\advancedhide\acp\main_module',
 					'modes'           => ['settings'],
-				]
+				],
 			]],
 		];
 	}

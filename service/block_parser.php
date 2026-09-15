@@ -1,5 +1,5 @@
 <?php
-namespace gospodinenotik\advancedhide\service;
+namespace vendor\advancedhide\service;
 
 if (!defined('IN_PHPBB'))
 {
@@ -25,11 +25,9 @@ class hide_block
 		$this->block_index = (int)$index;
 		$this->cond_str    = substr(trim($cond_str), 0, 255);
 		$this->content     = $content;
-
 		$this->condition_hash = hash('sha256', $this->cond_str);
 		$this->content_hash   = hash('sha256', $content);
 		$this->block_hash     = hash('sha256', $this->block_index . '_' . $this->condition_hash . '_' . $this->content_hash);
-
 		$this->parse_conditions();
 	}
 
@@ -55,7 +53,7 @@ class hide_block
 
 			$this->normalized_conditions[] = [
 				'type' => $type,
-				'args' => $args
+				'args' => $args,
 			];
 		}
 	}
@@ -161,7 +159,7 @@ class block_parser
 			$sub = explode(',', trim($part));
 			$type = strtolower(trim($sub[0] ?? ''));
 
-			if (($type === 'users' || $type === 'not_users') && count($sub) > 1)
+			if ($type === 'users' && count($sub) > 1)
 			{
 				$uids = [];
 				$usernames = [];
@@ -198,12 +196,11 @@ class block_parser
 					}
 				}
 				$uids = array_unique(array_filter($uids));
-				$new_parts[] = $type . ',' . (!empty($uids) ? implode(',', $uids) : '0');
+				$new_parts[] = 'users,' . (!empty($uids) ? implode(',', $uids) : '0');
 			}
 			elseif ($type === 'pass')
 			{
 				$pass_counter++;
-				// Внутри одного конкретного блока hide разрешен максимум 1 пароль
 				if ($pass_counter > 1)
 				{
 					$new_parts[] = 'pass_limit_exceeded';
@@ -271,11 +268,10 @@ class block_parser
 			return $text;
 		}
 
-		// Изоляция примеров BBCode внутри тегов [code]
 		$code_blocks = [];
-		$text = preg_replace_callback('/\[code(?:=[^\]]*)?\].*?\[\/code\]/is', function($m) use (&$code_blocks) {
+		$text = preg_replace_callback('/\[code(?:=[^\]]*)?\].*?\[\/code\]/is', function($matches) use (&$code_blocks) {
 			$placeholder = '___ADVHIDE_CODE_' . count($code_blocks) . '___';
-			$code_blocks[$placeholder] = $m[0];
+			$code_blocks[$placeholder] = $matches[0];
 			return $placeholder;
 		}, $text);
 
@@ -283,14 +279,14 @@ class block_parser
 		$total_pass_hashed = 0;
 		$max_pass_hashes = 3;
 
-		// 1. Обработка BBCode: [hide=...]
+		// 1. BBCode pass: [hide=...]
 		$text = preg_replace_callback('/\[hide(=[^\]]*)?\]/i', function($matches) use (&$pass_cache, &$total_pass_hashed, $max_pass_hashes) {
 			$raw_param = isset($matches[1]) ? ltrim($matches[1], '=') : '';
 			$new_cond_str = $this->canonicalize_cond_string($raw_param, $pass_cache, $total_pass_hashed, $max_pass_hashes);
 			return '[hide=' . $new_cond_str . ']';
 		}, $text);
 
-		// 2. Обработка s9e XML: <HIDE hide="..."> и <hide cond="...">
+		// 2. XML pass: <hide hide="..."> or <hide cond="...">
 		$text = preg_replace_callback('/(<(?:hide)\s+[^>]*(?:cond|hide)=")([^"]*)(")/i', function($matches) use (&$pass_cache, &$total_pass_hashed, $max_pass_hashes) {
 			$new_cond_str = $this->canonicalize_cond_string($matches[2], $pass_cache, $total_pass_hashed, $max_pass_hashes);
 			return $matches[1] . $new_cond_str . $matches[3];

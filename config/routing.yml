@@ -1,30 +1,4 @@
-gospodinenotik_advancedhide_unlock:
+vendor_advancedhide_unlock:
     path: /advancedhide/unlock
-    defaults: { _controller: gospodinenotik.advancedhide.controller:unlock }
+    defaults: { _controller: vendor.advancedhide.controller:unlock }
     methods: [POST]
-
-gospodinenotik_advancedhide_audit:
-    path: /advancedhide/audit
-    defaults: { _controller: gospodinenotik.advancedhide.controller:audit }
-    methods: [GET, POST]
-
-gospodinenotik_advancedhide_ban:
-    path: /advancedhide/ban
-    defaults: { _controller: gospodinenotik.advancedhide.controller:ban_user }
-    methods: [POST]
-
-gospodinenotik_advancedhide_report:
-    path: /advancedhide/report
-    defaults: { _controller: gospodinenotik.advancedhide.controller:report_bruteforce }
-    methods: [POST]
-
-gospodinenotik_advancedhide_appeal:
-    path: /advancedhide/appeal
-    defaults: { _controller: gospodinenotik.advancedhide.controller:submit_appeal }
-    methods: [POST]
-
-gospodinenotik_advancedhide_check_unlock:
-    path: /advancedhide/check_unlock
-    defaults: { _controller: gospodinenotik.advancedhide.controller:check_unlock }
-    methods: [POST]
-
