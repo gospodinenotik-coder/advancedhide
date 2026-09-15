@@ -158,6 +158,16 @@
 		time: '{{ ADVHIDE_TOKEN_TIME }}'
 	};
 
+	function advhideEscapeHtml(str) {
+		if (str === null || str === undefined) return '';
+		return String(str)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#039;');
+	}
+
 	function insertAtCursor(opener, closer) {
 		var textarea = document.getElementById('message') || document.querySelector('textarea[name="message"]');
 		if (textarea) {
@@ -428,29 +438,23 @@
 
 				if (res.logs && res.logs.length > 0) {
 					$.each(res.logs, function(i, log) {
-						var color = '#333';
-						if (log.status_raw === 'unlocked' || log.status_raw === 'success') color = '#2e7d32';
-						else if (log.status_raw === 'failed') color = '#c62828';
-						else if (log.status_raw === 'rate_limited') color = '#ef6c00';
-						else if (log.status_raw === 'banned') color = '#ad1457';
-						else if (log.status_raw === 'conditions_failed') color = '#e65100';
-						else if (log.status_raw === 'captcha_failed' || log.status_raw === 'captcha_error') color = '#d84315';
-
-						var isAuthor = (log.user_id == postAuthorId);
+						var isAuthor = (parseInt(log.user_id, 10) === postAuthorId);
 						var banBtnHtml = '';
-						if (isModerator && !isAuthor && log.user_id > 1) {
-							banBtnHtml = '<button type="button" class="button2 advhide-ban-trigger-btn" data-userid="' + log.user_id + '" data-username="' + log.username + '">{{ lang('ADVHIDE_BAN_BTN') }}</button>';
+						if (isModerator && !isAuthor && parseInt(log.user_id, 10) > 1) {
+							banBtnHtml = '<button type="button" class="button2 advhide-ban-trigger-btn" data-userid="' + parseInt(log.user_id, 10) + '" data-username="' + advhideEscapeHtml(log.username) + '">{{ lang('ADVHIDE_BAN_BTN') }}</button>';
 						} else if (isAuthor) {
 							banBtnHtml = '<span class="advhide-badge-author">{{ lang('ADVHIDE_AUTHOR') }}</span>';
 						}
 
+						var statusBadge = '<span class="advhide-status-badge ' + advhideEscapeHtml(log.status_raw || 'default') + '">' + advhideEscapeHtml(log.status) + '</span>';
+
 						logsHtml += '<tr>' +
-							'<td>' + log.attempt_time + '</td>' +
-							'<td>' + log.username + '</td>' +
-							'<td>' + log.user_ip + '</td>' +
-							'<td><strong style="color:' + color + ';">' + log.status + '</strong></td>' +
-							'<td>' + log.attempt_count + '</td>' +
-							'<td><code>' + (log.masked_pass || '-') + '</code></td>' +
+							'<td>' + advhideEscapeHtml(log.attempt_time) + '</td>' +
+							'<td>' + advhideEscapeHtml(log.username) + '</td>' +
+							'<td>' + advhideEscapeHtml(log.user_ip) + '</td>' +
+							'<td>' + statusBadge + '</td>' +
+							'<td>' + parseInt(log.attempt_count, 10) + '</td>' +
+							'<td><code>' + advhideEscapeHtml(log.masked_pass || '-') + '</code></td>' +
 							'<td>' + banBtnHtml + '</td>' +
 						'</tr>';
 					});
@@ -463,10 +467,10 @@
 					var bansHtml = '';
 					$.each(res.bans, function(i, ban) {
 						bansHtml += '<tr>' +
-							'<td>' + ban.username + '</td>' +
-							'<td>' + ban.ban_start + ' - ' + ban.ban_end + '</td>' +
-							'<td>' + (ban.ban_reason || '-') + '</td>' +
-							'<td><button type="button" class="button2 advhide-unban-btn" data-banid="' + ban.ban_id + '">{{ lang('ADVHIDE_UNBAN_BTN') }}</button></td>' +
+							'<td>' + advhideEscapeHtml(ban.username) + '</td>' +
+							'<td>' + advhideEscapeHtml(ban.ban_start) + ' - ' + advhideEscapeHtml(ban.ban_end) + '</td>' +
+							'<td>' + advhideEscapeHtml(ban.ban_reason || '-') + '</td>' +
+							'<td><button type="button" class="button2 advhide-unban-btn" data-banid="' + parseInt(ban.ban_id, 10) + '">{{ lang('ADVHIDE_UNBAN_BTN') }}</button></td>' +
 						'</tr>';
 					});
 					$('#advhide-audit-bans-list').html(bansHtml);
@@ -606,6 +610,46 @@
 				alert(res.message || 'Appeal submitted');
 			}
 		});
+	});
+
+	// 9. Динамическая AJAX-разблокировка при нажатии "Спасибо" / репутация
+	$(document).ajaxSuccess(function(event, xhr, settings) {
+		if (settings.url && (settings.url.indexOf('thanks') !== -1 || settings.url.indexOf('reputation') !== -1)) {
+			$('.advancedhide-box.hide-locked').each(function() {
+				var $box = $(this);
+				var boxId = $box.attr('id');
+				if (!boxId) return;
+				var parts = boxId.split('-');
+				if (parts.length === 3) {
+					var postId = parseInt(parts[1], 10);
+					var blockId = parseInt(parts[2], 10);
+					var formToken = $box.find('.hide-token').val() || $('input.hide-token').first().val() || advhideTokens.unlock;
+					var creationTime = $box.find('.hide-creation-time').val() || advhideTokens.time;
+					$.post('{{ U_ADVANCEDHIDE_CHECK_UNLOCK }}', {
+						post_id: postId,
+						block_id: blockId,
+						form_token: formToken,
+						creation_time: creationTime
+					}, function(res) {
+						if (res && res.success && res.unlocked && res.html) {
+							$box.replaceWith(res.html);
+						}
+					});
+				}
+			});
+		}
+	});
+
+	// 10. Закрытие модальных окон по Escape и валидация ввода
+	$(document).on('keydown', function(e) {
+		if (e.key === 'Escape' || e.keyCode === 27) {
+			if ($('#advhide-builder-modal').is(':visible')) $('#advhide-builder-modal').fadeOut(150);
+			if ($('#advhide-audit-modal').is(':visible')) $('#advhide-audit-modal').fadeOut(150);
+		}
+	});
+
+	$('#cond_posts_val, #cond_days_val').on('input', function() {
+		if (parseInt($(this).val(), 10) < 0) $(this).val('0');
 	});
 
 })(jQuery);

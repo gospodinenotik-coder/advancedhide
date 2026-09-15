@@ -21,4 +21,10 @@ gospodinenotik_advancedhide_report:
 gospodinenotik_advancedhide_appeal:
     path: /advancedhide/appeal
     defaults: { _controller: gospodinenotik.advancedhide.controller:submit_appeal }
-    methods: [POST]
+    methods: [POST]
+
+gospodinenotik_advancedhide_check_unlock:
+    path: /advancedhide/check_unlock
+    defaults: { _controller: gospodinenotik.advancedhide.controller:check_unlock }
+    methods: [POST]
+

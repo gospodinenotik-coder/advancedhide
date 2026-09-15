@@ -691,4 +691,106 @@ class main_controller
 
 		return new JsonResponse(['success' => true, 'message' => $this->language->lang('HIDE_APPEAL_SUBMITTED')]);
 	}
+
+	/**
+	 * Легковесная проверка разблокировки условий (например, после нажатия "Спасибо")
+	 */
+	public function check_unlock()
+	{
+		if (!$this->request->is_ajax())
+		{
+			return new JsonResponse(['success' => false, 'message' => 'Invalid request'], 400);
+		}
+
+		if (!check_form_key('advancedhide_unlock'))
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('FORM_INVALID')], 403);
+		}
+
+		$post_id  = $this->request->variable('post_id', 0);
+		$block_id = $this->request->variable('block_id', 0);
+
+		if ($post_id <= 0 || $block_id <= 0)
+		{
+			return new JsonResponse(['success' => false], 400);
+		}
+
+		$sql = 'SELECT p.post_id, p.topic_id, p.forum_id, p.poster_id, p.post_text, p.post_visibility,
+					   p.bbcode_uid, p.bbcode_bitfield, p.enable_bbcode, p.enable_smilies, p.enable_magic_url,
+					   t.topic_visibility
+				FROM ' . POSTS_TABLE . ' p
+				JOIN ' . TOPICS_TABLE . ' t ON (p.topic_id = t.topic_id)
+				WHERE p.post_id = ' . (int)$post_id;
+		$res = $this->db->sql_query($sql);
+		$post = $this->db->sql_fetchrow($res);
+		$this->db->sql_freeresult($res);
+
+		if (!$post)
+		{
+			return new JsonResponse(['success' => false], 404);
+		}
+
+		$forum_id = (int)$post['forum_id'];
+		$can_approve = $this->auth->acl_get('m_approve', $forum_id);
+
+		if (!$this->auth->acl_get('f_read', $forum_id) ||
+			($post['post_visibility'] != ITEM_APPROVED && !$can_approve) ||
+			($post['topic_visibility'] != ITEM_APPROVED && !$can_approve))
+		{
+			return new JsonResponse(['success' => false], 403);
+		}
+
+		$blocks = $this->parser->parse_blocks($post['post_text']);
+		if (!isset($blocks[$block_id - 1]))
+		{
+			return new JsonResponse(['success' => false], 404);
+		}
+
+		$block = $blocks[$block_id - 1];
+
+		$context = [
+			'forum_id'  => $forum_id,
+			'topic_id'  => (int)$post['topic_id'],
+			'post_id'   => (int)$post['post_id'],
+			'poster_id' => (int)$post['poster_id'],
+		];
+
+		\gospodinenotik\advancedhide\service\auth_service::clear_runtime_cache();
+
+		$eval = $this->auth_service->evaluate_block($block, $context);
+		if ($eval['can_view'])
+		{
+			if (!function_exists('generate_text_for_display'))
+			{
+				include_once($this->phpbb_root_path . 'includes/functions_content.' . $this->php_ext);
+			}
+
+			$bbcode_options = ($post['enable_bbcode'] ? 1 : 0) | ($post['enable_smilies'] ? 2 : 0) | ($post['enable_magic_url'] ? 4 : 0);
+			$rendered_all = generate_text_for_display($post['post_text'], $post['bbcode_uid'], $post['bbcode_bitfield'], $bbcode_options);
+			$rendered_inner = '';
+			if (preg_match_all('/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is', $rendered_all, $matches))
+			{
+				$rendered_inner = $matches[2][$block_id - 1] ?? '';
+			}
+
+			$badge = '';
+			if ($eval['override'] === 'mod')
+			{
+				$badge = '<span class="hide-override-badge mod">' . htmlspecialchars($this->language->lang('HIDE_OVERRIDE_MOD'), ENT_QUOTES, 'UTF-8') . '</span>';
+			}
+			elseif ($eval['override'] === 'author')
+			{
+				$badge = '<span class="hide-override-badge author">' . htmlspecialchars($this->language->lang('HIDE_OVERRIDE_AUTHOR'), ENT_QUOTES, 'UTF-8') . '</span>';
+			}
+
+			$html = '<div class="advancedhide-box hide-unlocked" id="hide-' . $post_id . '-' . $block->block_index . '">' .
+				'<div class="hide-header"><i class="fa fa-unlock-alt"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_UNLOCKED'), ENT_QUOTES, 'UTF-8') . ' ' . $badge . '</div>' .
+				'<div class="hide-content">' . $rendered_inner . '</div>' .
+			'</div>';
+
+			return new JsonResponse(['success' => true, 'unlocked' => true, 'html' => $html]);
+		}
+
+		return new JsonResponse(['success' => true, 'unlocked' => false]);
+	}
 }

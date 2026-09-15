@@ -14,7 +14,7 @@ class main_module
 
 	public function main($id, $mode)
 	{
-		global $config, $request, $template, $user, $language, $db, $table_prefix;
+		global $config, $request, $template, $user, $language, $db, $table_prefix, $phpbb_container, $phpbb_root_path, $php_ext;
 
 		$language->add_lang('info_acp_advancedhide', 'gospodinenotik/advancedhide');
 		$language->add_lang('common', 'gospodinenotik/advancedhide');
@@ -59,20 +59,28 @@ class main_module
 				trigger_error($language->lang('ADVHIDE_REPORT_CLOSED') . adm_back_link($this->u_action));
 			}
 
-			$filter_status = $request->variable('filter_status', '');
-
-			// Запрос логов
+			// Параметры фильтрации и пагинации
+			$start = $request->variable('start', 0);
+			$limit = 25;
+			$status_filter = $request->variable('status_filter', $request->variable('filter_status', ''));
 			$sql_where = '';
-			if ($filter_status !== '')
+
+			if ($status_filter !== '')
 			{
-				$sql_where = ' WHERE l.status = \'' . $db->sql_escape($filter_status) . '\'';
+				$sql_where = ' WHERE l.status = \'' . $db->sql_escape($status_filter) . '\'';
 			}
+
+			// Подсчет общего количества записей
+			$sql_count = 'SELECT COUNT(l.log_id) AS total_logs FROM ' . $table_prefix . 'advancedhide_logs l' . $sql_where;
+			$res_count = $db->sql_query($sql_count);
+			$total_logs = (int)$db->sql_fetchfield('total_logs');
+			$db->sql_freeresult($res_count);
 
 			$sql = 'SELECT l.*, u.username, u.user_colour FROM ' . $table_prefix . 'advancedhide_logs l
 				LEFT JOIN ' . USERS_TABLE . ' u ON (l.user_id = u.user_id)
 				' . $sql_where . '
 				ORDER BY l.attempt_time DESC';
-			$res = $db->sql_query_limit($sql, 100);
+			$res = $db->sql_query_limit($sql, $limit, $start);
 
 			while ($row = $db->sql_fetchrow($res))
 			{
@@ -118,6 +126,21 @@ class main_module
 				]);
 			}
 			$db->sql_freeresult($res);
+
+			// Построение пагинатора phpBB
+			if ($phpbb_container && $phpbb_container->has('pagination'))
+			{
+				$pagination = $phpbb_container->get('pagination');
+				$base_url = $this->u_action . '&amp;action=audit' . ($status_filter !== '' ? '&amp;status_filter=' . urlencode($status_filter) : '');
+				$pagination->generate_template_pagination($base_url, 'pagination', 'start', $total_logs, $limit, $start);
+			}
+
+			$template->assign_vars([
+				'S_STATUS_FILTER' => $status_filter,
+				'FILTER_STATUS'   => $status_filter,
+				'TOTAL_LOGS'      => $total_logs,
+				'U_ACTION_FILTER' => $this->u_action . '&amp;action=audit',
+			]);
 
 			// Запрос банов
 			$sql_b = 'SELECT b.*, u.username, u.user_colour, mb.username AS mod_username, mb.user_colour AS mod_colour

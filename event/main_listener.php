@@ -82,8 +82,9 @@ class main_listener implements EventSubscriberInterface
 		$token_sid = ($this->user->data['user_id'] == ANONYMOUS && !empty($this->config['form_token_sid_guests'])) ? $this->user->session_id : '';
 
 		$vars = [
-			'U_ADVANCEDHIDE_UNLOCK'   => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/unlock'),
-			'U_ADVANCEDHIDE_AUDIT'    => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/audit'),
+			'U_ADVANCEDHIDE_UNLOCK'       => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/unlock'),
+			'U_ADVANCEDHIDE_CHECK_UNLOCK' => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/check_unlock'),
+			'U_ADVANCEDHIDE_AUDIT'        => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/audit'),
 			'U_ADVANCEDHIDE_BAN'      => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/ban'),
 			'U_ADVANCEDHIDE_REPORT'   => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/report'),
 			'U_ADVANCEDHIDE_APPEAL'   => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/appeal'),

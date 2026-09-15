@@ -297,3 +297,37 @@
 .advhide-audit-table th, .advhide-audit-table td {
 	padding: 6px 8px;
 }
+
+/* Адаптивность модального окна для мобильных устройств */
+@media (max-width: 600px) {
+	.advhide-modal-dialog,
+	.advhide-modal-content {
+		width: 95% !important;
+		margin: 20px auto !important;
+	}
+	.advhide-cond-row {
+		flex-direction: column;
+		align-items: flex-start !important;
+		gap: 4px;
+	}
+	.advhide-cond-row input[type="text"],
+	.advhide-cond-row input[type="number"] {
+		width: 100% !important;
+		box-sizing: border-box;
+	}
+}
+
+/* Статусные бейджи в аудите */
+.advhide-status-badge {
+	display: inline-block;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 0.85em;
+	font-weight: bold;
+}
+.advhide-status-badge.failed { background: #f2dede; color: #a94442; }
+.advhide-status-badge.unlocked, .advhide-status-badge.success { background: #dff0d8; color: #3c763d; }
+.advhide-status-badge.banned { background: #333; color: #fff; }
+.advhide-status-badge.captcha_failed, .advhide-status-badge.captcha_error { background: #fcf8e3; color: #8a6d3b; }
+.advhide-status-badge.rate_limited { background: #fff3e0; color: #ef6c00; }
+.advhide-status-badge.conditions_failed { background: #fbe9e7; color: #e65100; }
