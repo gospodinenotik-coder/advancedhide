@@ -570,7 +570,7 @@ class auth_service
 
 		if (!isset(self::$user_groups_cache[$user_id]))
 		{
-			$user_gids = [(int)$this->user->data['group_id']];
+			$user_gids = ($user_id === (int)$this->user->data['user_id']) ? [(int)$this->user->data['group_id']] : [];
 			$sql = 'SELECT group_id FROM ' . USER_GROUP_TABLE . ' WHERE user_id = ' . (int)$user_id . ' AND user_pending = 0';
 			$res = $this->db->sql_query($sql);
 			while ($row = $this->db->sql_fetchrow($res))

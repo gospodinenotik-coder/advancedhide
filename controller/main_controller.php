@@ -54,12 +54,7 @@ class main_controller
 
 	protected function mask_password($pass)
 	{
-		$len = mb_strlen($pass);
-		if ($len <= 2)
-		{
-			return str_repeat('*', max(1, $len));
-		}
-		return mb_substr($pass, 0, 1) . '******' . mb_substr($pass, -1);
+		return '******';
 	}
 
 	protected function log_attempt($post_id, $block_index, $user_id = null, $ip = null, $status = 'failed', $entered_pass = '')
@@ -500,6 +495,19 @@ class main_controller
 
 		if ($action === 'unban' && $ban_id > 0)
 		{
+			if (!$is_mod)
+			{
+				$sql_check = 'SELECT ban_id FROM ' . $this->table_prefix . 'advancedhide_bans
+					WHERE ban_id = ' . (int)$ban_id . ' AND post_id = ' . (int)$post_id;
+				$res_check = $this->db->sql_query($sql_check);
+				$ban_match = $this->db->sql_fetchrow($res_check);
+				$this->db->sql_freeresult($res_check);
+				if (!$ban_match)
+				{
+					return new JsonResponse(['success' => false, 'message' => $this->language->lang('NO_AUTH_OPERATION')], 403);
+				}
+			}
+
 			$this->auth_service->remove_block_ban($ban_id);
 			return new JsonResponse(['success' => true, 'message' => $this->language->lang('ADVHIDE_UNBAN_SUCCESS')]);
 		}

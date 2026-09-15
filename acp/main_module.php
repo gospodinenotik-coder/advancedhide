@@ -86,6 +86,13 @@ class main_module
 					if (is_array($ts_ary))
 					{
 						$formatted_list = array_map(function($t) use ($user) {
+							if (is_array($t))
+							{
+								$time_str = !empty($t['time']) ? $user->format_date((int)$t['time']) : '';
+								$ip_str   = !empty($t['ip']) ? htmlspecialchars($t['ip'], ENT_QUOTES, 'UTF-8') : '';
+								$pass_str = !empty($t['pass']) ? htmlspecialchars($t['pass'], ENT_QUOTES, 'UTF-8') : '';
+								return trim("{$time_str} | IP: {$ip_str} | {$pass_str}", ' |');
+							}
 							return is_numeric($t) ? $user->format_date((int)$t) : (string)$t;
 						}, $ts_ary);
 						$details_formatted = implode('<br />', $formatted_list);
