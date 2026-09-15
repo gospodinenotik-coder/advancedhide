@@ -2,11 +2,7 @@
 (function($) {
 	'use strict';
 
-<<<<<<< HEAD
 	// 1. BBCode toolbar handlers
-=======
-	// 1. Обработка кликов по кнопкам в BBCode-редакторе
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 	$(document).on('click', '.advhide-btn', function(e) {
 		e.preventDefault();
 		var type = $(this).data('type');
@@ -79,7 +75,6 @@
 		}
 	});
 
-<<<<<<< HEAD
 	// 2. AJAX Password Unlock with Captcha support
 	$(document).on('click', '.hide-pass-submit', function(e) {
 		e.preventDefault();
@@ -91,20 +86,6 @@
 		var blockId   = $form.data('blockid');
 		var passVal   = $form.find('.hide-pass-input').val();
 		var formTok   = $form.find('.hide-token').val() || '';
-=======
-	// 2. Обработка AJAX-разблокировки паролем с поддержкой Captcha
-	$(document).on('click', '.hide-pass-submit', function(e) {
-		e.preventDefault();
-		var $btn   = $(this);
-		var $form  = $btn.closest('.hide-pass-form');
-		var $box   = $form.closest('.advancedhide-box');
-		var $msg   = $form.find('.hide-pass-msg');
-
-		var postId   = $form.data('postid');
-		var blockId  = $form.data('blockid');
-		var passVal  = $form.find('.hide-pass-input').val();
-		var formTok  = $form.find('.hide-token').val() || '';
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 		var creatTime = $form.find('.hide-creation-time').val() || '';
 
 		if (!passVal) return;
@@ -117,11 +98,7 @@
 			creation_time: creatTime
 		};
 
-<<<<<<< HEAD
 		// Collect Captcha inputs
-=======
-		// Сбор всех полей Captcha, расположенных внутри этой формы
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 		$form.find('input, select, textarea').each(function() {
 			var name = $(this).attr('name');
 			if (name && typeof postData[name] === 'undefined') {

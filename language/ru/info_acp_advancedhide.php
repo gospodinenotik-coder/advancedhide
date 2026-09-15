@@ -34,9 +34,5 @@ $lang = array_merge($lang, [
 	'ADVANCEDHIDE_TH_MODULE'            => 'Модуль',
 	'ADVANCEDHIDE_TH_STATUS'            => 'Статус',
 	'ADVANCEDHIDE_TH_ICON'              => 'Иконка FontAwesome',
-<<<<<<< HEAD
 	'ADVANCEDHIDE_TH_SETTINGS'          => 'Настройки модуля',
-=======
-	'ADVANCEDHIDE_TH_SETTINGS'          => 'Параметры модуля',
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 ]);
