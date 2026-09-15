@@ -1,5 +1,5 @@
 <?php
-namespace vendor\advancedhide\acp;
+namespace gospodinenotik\advancedhide\acp;
 
 if (!defined('IN_PHPBB'))
 {
@@ -16,8 +16,8 @@ class main_module
 	{
 		global $config, $request, $template, $user, $language, $db, $table_prefix;
 
-		$language->add_lang('info_acp_advancedhide', 'vendor/advancedhide');
-		$language->add_lang('common', 'vendor/advancedhide');
+		$language->add_lang('info_acp_advancedhide', 'gospodinenotik/advancedhide');
+		$language->add_lang('common', 'gospodinenotik/advancedhide');
 
 		$modules = ['guest', 'posts', 'days', 'time', 'regdate', 'reply', 'thanks', 'groups', 'users', 'not_groups', 'not_users', 'pass'];
 

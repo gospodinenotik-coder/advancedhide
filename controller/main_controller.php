@@ -1,5 +1,5 @@
 <?php
-namespace vendor\advancedhide\controller;
+namespace gospodinenotik\advancedhide\controller;
 
 if (!defined('IN_PHPBB'))
 {
@@ -15,8 +15,8 @@ use phpbb\request\request_interface;
 use phpbb\language\language;
 use phpbb\cache\driver\driver_interface as cache_interface;
 use phpbb\captcha\factory as captcha_factory;
-use vendor\advancedhide\service\block_parser;
-use vendor\advancedhide\service\auth_service;
+use gospodinenotik\advancedhide\service\block_parser;
+use gospodinenotik\advancedhide\service\auth_service;
 
 class main_controller
 {
@@ -49,7 +49,7 @@ class main_controller
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
 		$this->table_prefix = $table_prefix ?: (defined('POSTS_TABLE') ? substr(POSTS_TABLE, 0, -5) : 'phpbb_');
-		$this->language->add_lang('common', 'vendor/advancedhide');
+		$this->language->add_lang('common', 'gospodinenotik/advancedhide');
 	}
 
 	protected function mask_password($pass)

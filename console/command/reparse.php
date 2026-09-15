@@ -1,5 +1,5 @@
 <?php
-namespace vendor\advancedhide\console\command;
+namespace gospodinenotik\advancedhide\console\command;
 
 if (!defined('IN_PHPBB'))
 {
@@ -19,13 +19,13 @@ class reparse extends Command
 	/** @var \phpbb\db\driver\driver_interface */
 	protected $db;
 
-	/** @var \vendor\advancedhide\service\block_parser */
+	/** @var \gospodinenotik\advancedhide\service\block_parser */
 	protected $parser;
 
 	/** @var string */
 	protected $table_prefix;
 
-	public function __construct(\phpbb\user $user, \phpbb\db\driver\driver_interface $db, \vendor\advancedhide\service\block_parser $parser, $table_prefix)
+	public function __construct(\phpbb\user $user, \phpbb\db\driver\driver_interface $db, \gospodinenotik\advancedhide\service\block_parser $parser, $table_prefix)
 	{
 		$this->user = $user;
 		$this->db = $db;

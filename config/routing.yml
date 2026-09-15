@@ -1,24 +1,24 @@
-vendor_advancedhide_unlock:
+gospodinenotik_advancedhide_unlock:
     path: /advancedhide/unlock
-    defaults: { _controller: vendor.advancedhide.controller:unlock }
+    defaults: { _controller: gospodinenotik.advancedhide.controller:unlock }
     methods: [POST]
 
-vendor_advancedhide_audit:
+gospodinenotik_advancedhide_audit:
     path: /advancedhide/audit
-    defaults: { _controller: vendor.advancedhide.controller:audit }
+    defaults: { _controller: gospodinenotik.advancedhide.controller:audit }
     methods: [GET, POST]
 
-vendor_advancedhide_ban:
+gospodinenotik_advancedhide_ban:
     path: /advancedhide/ban
-    defaults: { _controller: vendor.advancedhide.controller:ban_user }
+    defaults: { _controller: gospodinenotik.advancedhide.controller:ban_user }
     methods: [POST]
 
-vendor_advancedhide_report:
+gospodinenotik_advancedhide_report:
     path: /advancedhide/report
-    defaults: { _controller: vendor.advancedhide.controller:report_bruteforce }
+    defaults: { _controller: gospodinenotik.advancedhide.controller:report_bruteforce }
     methods: [POST]
 
-vendor_advancedhide_appeal:
+gospodinenotik_advancedhide_appeal:
     path: /advancedhide/appeal
-    defaults: { _controller: vendor.advancedhide.controller:submit_appeal }
+    defaults: { _controller: gospodinenotik.advancedhide.controller:submit_appeal }
     methods: [POST]

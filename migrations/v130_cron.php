@@ -1,5 +1,5 @@
 <?php
-namespace vendor\advancedhide\migrations;
+namespace gospodinenotik\advancedhide\migrations;
 
 if (!defined('IN_PHPBB'))
 {
@@ -10,7 +10,7 @@ class v130_cron extends \phpbb\db\migration\migration
 {
 	public static function depends_on()
 	{
-		return ['\vendor\advancedhide\migrations\v120_audit_bans'];
+		return ['\gospodinenotik\advancedhide\migrations\v120_audit_bans'];
 	}
 
 	public function update_data()

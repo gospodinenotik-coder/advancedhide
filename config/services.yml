@@ -1,13 +1,13 @@
 services:
-    vendor.advancedhide.parser:
-        class: vendor\advancedhide\service\block_parser
+    gospodinenotik.advancedhide.parser:
+        class: gospodinenotik\advancedhide\service\block_parser
         arguments:
             - '@config'
             - '%core.root_path%'
             - '%core.php_ext%'
 
-    vendor.advancedhide.auth_service:
-        class: vendor\advancedhide\service\auth_service
+    gospodinenotik.advancedhide.auth_service:
+        class: gospodinenotik\advancedhide\service\auth_service
         arguments:
             - '@config'
             - '@user'
@@ -21,8 +21,8 @@ services:
             - '%core.root_path%'
             - '%core.php_ext%'
 
-    vendor.advancedhide.listener:
-        class: vendor\advancedhide\event\main_listener
+    gospodinenotik.advancedhide.listener:
+        class: gospodinenotik\advancedhide\event\main_listener
         arguments:
             - '@config'
             - '@user'
@@ -31,15 +31,15 @@ services:
             - '@request'
             - '@language'
             - '@dbal.conn'
-            - '@vendor.advancedhide.parser'
-            - '@vendor.advancedhide.auth_service'
+            - '@gospodinenotik.advancedhide.parser'
+            - '@gospodinenotik.advancedhide.auth_service'
             - '%core.root_path%'
             - '%core.php_ext%'
         tags:
             - { name: event.listener }
 
-    vendor.advancedhide.controller:
-        class: vendor\advancedhide\controller\main_controller
+    gospodinenotik.advancedhide.controller:
+        class: gospodinenotik\advancedhide\controller\main_controller
         arguments:
             - '@config'
             - '@user'
@@ -48,30 +48,30 @@ services:
             - '@request'
             - '@language'
             - '@cache.driver'
-            - '@vendor.advancedhide.parser'
-            - '@vendor.advancedhide.auth_service'
+            - '@gospodinenotik.advancedhide.parser'
+            - '@gospodinenotik.advancedhide.auth_service'
             - '@captcha.factory'
             - '%core.root_path%'
             - '%core.php_ext%'
             - '%core.table_prefix%'
 
-    vendor.advancedhide.console.reparse:
-        class: vendor\advancedhide\console\command\reparse
+    gospodinenotik.advancedhide.console.reparse:
+        class: gospodinenotik\advancedhide\console\command\reparse
         arguments:
             - '@user'
             - '@dbal.conn'
-            - '@vendor.advancedhide.parser'
+            - '@gospodinenotik.advancedhide.parser'
             - '%core.table_prefix%'
         tags:
             - { name: console.command }
 
-    vendor.advancedhide.cron.tidy_logs:
-        class: vendor\advancedhide\cron\tidy_logs
+    gospodinenotik.advancedhide.cron.tidy_logs:
+        class: gospodinenotik\advancedhide\cron\tidy_logs
         arguments:
             - '@config'
             - '@dbal.conn'
             - '%core.table_prefix%'
         calls:
-            - [set_name, [vendor.advancedhide.cron.tidy_logs]]
+            - [set_name, [gospodinenotik.advancedhide.cron.tidy_logs]]
         tags:
             - { name: cron.task }

@@ -1,5 +1,5 @@
 <?php
-namespace vendor\advancedhide\cron;
+namespace gospodinenotik\advancedhide\cron;
 
 if (!defined('IN_PHPBB'))
 {

@@ -1,5 +1,5 @@
 <?php
-namespace vendor\advancedhide\migrations;
+namespace gospodinenotik\advancedhide\migrations;
 
 if (!defined('IN_PHPBB'))
 {
@@ -10,7 +10,7 @@ class v120_audit_bans extends \phpbb\db\migration\migration
 {
 	public static function depends_on()
 	{
-		return ['\vendor\advancedhide\migrations\v110_modules'];
+		return ['\gospodinenotik\advancedhide\migrations\v110_modules'];
 	}
 
 	public function update_schema()
@@ -120,7 +120,7 @@ class v120_audit_bans extends \phpbb\db\migration\migration
 				'acp',
 				'ACP_CAT_DOT_MODS',
 				[
-					'module_basename' => '\vendor\advancedhide\acp\main_module',
+					'module_basename' => '\gospodinenotik\advancedhide\acp\main_module',
 					'modes'           => ['audit'],
 				]
 			]],

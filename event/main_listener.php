@@ -1,5 +1,5 @@
 <?php
-namespace vendor\advancedhide\event;
+namespace gospodinenotik\advancedhide\event;
 
 if (!defined('IN_PHPBB'))
 {
@@ -14,8 +14,8 @@ use phpbb\template\template;
 use phpbb\request\request_interface;
 use phpbb\language\language;
 use phpbb\db\driver\driver_interface;
-use vendor\advancedhide\service\block_parser;
-use vendor\advancedhide\service\auth_service;
+use gospodinenotik\advancedhide\service\block_parser;
+use gospodinenotik\advancedhide\service\auth_service;
 use s9e\TextFormatter\Configurator\Items\AttributeFilters\RegexpFilter;
 
 class main_listener implements EventSubscriberInterface
@@ -66,8 +66,8 @@ class main_listener implements EventSubscriberInterface
 
 	public function load_language($event)
 	{
-		$this->language->add_lang('common', 'vendor/advancedhide');
-		$this->language->add_lang('permissions_advancedhide', 'vendor/advancedhide');
+		$this->language->add_lang('common', 'gospodinenotik/advancedhide');
+		$this->language->add_lang('permissions_advancedhide', 'gospodinenotik/advancedhide');
 	}
 
 	public function assign_common_vars($event)
@@ -109,7 +109,7 @@ class main_listener implements EventSubscriberInterface
 
 	public function register_permissions($event)
 	{
-		$this->language->add_lang('permissions_advancedhide', 'vendor/advancedhide');
+		$this->language->add_lang('permissions_advancedhide', 'gospodinenotik/advancedhide');
 		$permissions = $event['permissions'];
 		$permissions['m_hide_override'] = ['lang' => 'ACL_M_HIDE_OVERRIDE', 'cat' => 'misc'];
 		$permissions['m_hide_ban']      = ['lang' => 'ACL_M_HIDE_BAN',      'cat' => 'post_actions'];
