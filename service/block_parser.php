@@ -201,7 +201,11 @@ class block_parser
 			elseif ($type === 'pass')
 			{
 				$pass_counter++;
+<<<<<<< HEAD
 				if ($pass_counter > 1)
+=======
+				if ($pass_counter > 2 || $total_pass_hashed >= $max_pass_hashes)
+>>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 				{
 					$new_parts[] = 'pass_limit_exceeded';
 					continue;
@@ -223,12 +227,6 @@ class block_parser
 				$info = password_get_info($plain_pass);
 				if ($info['algoName'] === 'unknown')
 				{
-					if ($total_pass_hashed >= $max_pass_hashes)
-					{
-						$new_parts[] = 'pass_limit_exceeded';
-						continue;
-					}
-
 					$total_pass_hashed++;
 					$hashed = password_hash($plain_pass, PASSWORD_DEFAULT);
 					$pass_cache[$plain_pass] = $hashed;
@@ -268,6 +266,7 @@ class block_parser
 			return $text;
 		}
 
+<<<<<<< HEAD
 		$code_blocks = [];
 		$text = preg_replace_callback('/\[code(?:=[^\]]*)?\].*?\[\/code\]/is', function($matches) use (&$code_blocks) {
 			$placeholder = '___ADVHIDE_CODE_' . count($code_blocks) . '___';
@@ -275,6 +274,8 @@ class block_parser
 			return $placeholder;
 		}, $text);
 
+=======
+>>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 		$pass_cache = [];
 		$total_pass_hashed = 0;
 		$max_pass_hashes = 3;
@@ -291,11 +292,6 @@ class block_parser
 			$new_cond_str = $this->canonicalize_cond_string($matches[2], $pass_cache, $total_pass_hashed, $max_pass_hashes);
 			return $matches[1] . $new_cond_str . $matches[3];
 		}, $text);
-
-		if (!empty($code_blocks))
-		{
-			$text = strtr($text, $code_blocks);
-		}
 
 		return $text;
 	}

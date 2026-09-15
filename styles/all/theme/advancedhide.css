@@ -88,6 +88,7 @@
 	margin-left: 6px;
 }
 
+<<<<<<< HEAD
 .hide-override-badge.mod {
 	background: #0275d8;
 }
@@ -96,6 +97,12 @@
 	background: #5cb85c;
 }
 
+=======
+.hide-override-badge.mod { background: #0275d8; }
+.hide-override-badge.author { background: #5cb85c; }
+
+/* Капча в форме разблокировки */
+>>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 .advhide-captcha-box {
 	margin-top: 8px;
 	padding: 8px;

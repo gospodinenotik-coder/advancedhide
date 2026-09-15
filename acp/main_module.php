@@ -15,10 +15,15 @@ class main_module
 	public function main($id, $mode)
 	{
 		global $config, $request, $template, $user, $language;
+<<<<<<< HEAD
 
 		$language->add_lang('info_acp_advancedhide', 'vendor/advancedhide');
 		$language->add_lang('common', 'vendor/advancedhide');
+=======
+>>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 
+		$language->add_lang('info_acp_advancedhide', 'vendor/advancedhide');
+		$language->add_lang('common', 'vendor/advancedhide');
 		$this->tpl_name = 'acp_advancedhide';
 		$this->page_title = $language->lang('ACP_ADVANCEDHIDE_TITLE');
 
