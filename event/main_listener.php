@@ -71,8 +71,6 @@ class main_listener implements EventSubscriberInterface
 
 	public function assign_common_vars($event)
 	{
-		add_form_key('advancedhide_unlock');
-
 		$modules = ['guest', 'posts', 'days', 'time', 'regdate', 'reply', 'thanks', 'groups', 'users', 'pass'];
 		$vars = [
 			'U_ADVANCEDHIDE_UNLOCK'   => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/unlock'),
@@ -242,7 +240,6 @@ class main_listener implements EventSubscriberInterface
 					'</div>';
 			}
 
-			// Block is locked: neutralize any attachments placed inside this block
 			if (!empty($attachments[$post_id]))
 			{
 				preg_match_all('/\[attachment=(\d+)(?::[a-zA-Z0-9_-]+)?\]/i', $block->content, $att_matches);
