@@ -109,4 +109,12 @@ $lang = array_merge($lang, [
 	'ADVHIDE_APPEAL_BTN'                => 'Appeal Ban',
 	'ADVHIDE_BUILDER_PREVIEW'           => 'Tag Preview',
 	'ADVHIDE_BUILDER_CLOSE'             => 'Close',
+	'ADVHIDE_AUDIT_UNLOCKED'            => 'Unlocked',
+	'ADVHIDE_AUDIT_SUCCESS'             => 'Unlocked',
+	'ADVHIDE_AUDIT_FAILED'              => 'Incorrect password',
+	'ADVHIDE_AUDIT_RATE_LIMITED'        => 'Rate Limited',
+	'ADVHIDE_AUDIT_CAPTCHA_FAILED'      => 'Captcha failed',
+	'ADVHIDE_AUDIT_CAPTCHA_ERROR'       => 'Captcha failed',
+	'ADVHIDE_AUDIT_BANNED'              => 'Banned',
+	'ADVHIDE_AUDIT_CONDITIONS_FAILED'   => 'Conditions not met',
 ]);

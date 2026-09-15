@@ -61,12 +61,25 @@ class main_controller
 		return mb_substr($pass, 0, 1) . '******' . mb_substr($pass, -1);
 	}
 
-	protected function log_attempt($post_id, $block_index, $user_id, $ip, $status, $entered_pass = '')
+	protected function log_attempt($post_id, $block_index, $user_id = null, $ip = null, $status = 'failed', $entered_pass = '')
 	{
 		$post_id = (int)$post_id;
 		$block_index = (int)$block_index;
-		$user_id = (int)$user_id;
-		$ip = (string)$ip;
+
+		if (!is_numeric($user_id) && is_string($user_id))
+		{
+			// Called as ($post_id, $block_index, $status, $entered_pass)
+			$entered_pass = (string)$ip;
+			$status = $user_id;
+			$user_id = (int)$this->user->data['user_id'];
+			$ip = $this->user->ip;
+		}
+		else
+		{
+			$user_id = (int)$user_id;
+			$ip = (string)$ip;
+		}
+
 		$status = substr((string)$status, 0, 32);
 		$masked = $entered_pass !== '' ? $this->mask_password($entered_pass) : '';
 		$now = time();
@@ -206,19 +219,23 @@ class main_controller
 		$user_id = (int)$this->user->data['user_id'];
 		$user_ip = $this->user->ip;
 
-		// Проверка бана пользователя на данный блок
-		$ban_info = $this->auth_service->get_user_block_ban($post_id, $block_id, $user_id);
-		if ($ban_info !== null && !$this->auth->acl_get('m_hide_override', $forum_id))
+		// Ранняя отсечка: если зарегистрированный пользователь забанен к этому блоку,
+		// не даём проверять пароль и не расходуем ресурсы сервера
+		if ($user_id > 1)
 		{
-			$this->log_attempt($post_id, $block_id, $user_id, $user_ip, 'banned', $pass);
-			$reason_msg = !empty($ban_info['ban_reason']) ? $this->language->lang('HIDE_BANNED_WITH_REASON', $ban_info['ban_reason']) : $this->language->lang('HIDE_BANNED_FROM_BLOCK');
-			return new JsonResponse([
-				'success'   => false,
-				'message'   => $reason_msg,
-				'is_banned' => true,
-				'post_id'   => $post_id,
-				'block_id'  => $block_id,
-			], 403);
+			$ban_info = $this->auth_service->get_user_block_ban($post_id, $block_id, $user_id);
+			if ($ban_info !== null && $ban_info !== false && !$this->auth->acl_get('m_hide_override', $forum_id))
+			{
+				$this->log_attempt($post_id, $block_id, $user_id, $user_ip, 'banned', $pass);
+				$reason_msg = !empty($ban_info['ban_reason']) ? $this->language->lang('HIDE_BANNED_WITH_REASON', $ban_info['ban_reason']) : $this->language->lang('HIDE_BANNED_FROM_BLOCK');
+				return new JsonResponse([
+					'success'   => false,
+					'message'   => $reason_msg,
+					'is_banned' => true,
+					'post_id'   => $post_id,
+					'block_id'  => $block_id,
+				], 403);
+			}
 		}
 
 		$session_id = !empty($this->user->session_id) ? $this->user->session_id : $this->user->ip;
@@ -287,7 +304,7 @@ class main_controller
 			$re_eval = $this->auth_service->evaluate_block($block, $context);
 			if (!$re_eval['can_view'])
 			{
-				$this->log_attempt($post_id, $block_id, $user_id, $user_ip, 'failed', $pass);
+				$this->log_attempt($post_id, $block_id, $user_id, $user_ip, 'conditions_failed', $pass);
 				$this->auth_service->refund_rate_limit($reservation);
 				return new JsonResponse([
 					'success' => false,
@@ -372,14 +389,15 @@ class main_controller
 			$ip = $row['user_ip'];
 			if (!$is_mod && !empty($ip))
 			{
-				$ip_parts = explode('.', $ip);
-				if (count($ip_parts) === 4)
+				if (strpos($ip, ':') !== false)
 				{
-					$ip = $ip_parts[0] . '.' . $ip_parts[1] . '.*.*';
+					$parts = explode(':', $ip);
+					$ip = (!empty($parts[0]) ? $parts[0] : '2001') . ':*:*:*';
 				}
 				else
 				{
-					$ip = substr($ip, 0, 8) . '...';
+					$parts = explode('.', $ip);
+					$ip = (count($parts) === 4) ? $parts[0] . '.' . $parts[1] . '.*.*' : '*.*.*.*';
 				}
 			}
 
@@ -447,7 +465,7 @@ class main_controller
 		$target_user_id  = $this->request->variable('target_user_id', 0) ?: $this->request->variable('user_id', 0);
 		$target_username = $this->request->variable('username', '', true);
 		$days            = $this->request->variable('duration_days', 0) ?: $this->request->variable('days', 0);
-		$reason          = $this->request->variable('reason', '', true);
+		$reason          = mb_substr(trim($this->request->variable('reason', '', true)), 0, 500);
 		$action          = $this->request->variable('action', 'ban');
 		$ban_id          = $this->request->variable('ban_id', 0);
 
@@ -519,7 +537,7 @@ class main_controller
 
 		$post_id  = $this->request->variable('post_id', 0);
 		$block_id = $this->request->variable('block_id', 0);
-		$reason   = $this->request->variable('reason', '', true);
+		$reason   = mb_substr(trim($this->request->variable('reason', '', true)), 0, 500);
 
 		$sql = 'SELECT poster_id, forum_id, topic_id FROM ' . POSTS_TABLE . ' WHERE post_id = ' . (int)$post_id;
 		$res = $this->db->sql_query($sql);
@@ -572,7 +590,7 @@ class main_controller
 
 		$post_id  = $this->request->variable('post_id', 0);
 		$block_id = $this->request->variable('block_id', 0);
-		$reason   = $this->request->variable('reason', '', true);
+		$reason   = mb_substr(trim($this->request->variable('reason', '', true)), 0, 500);
 
 		$user_id = (int)$this->user->data['user_id'];
 		if ($user_id <= 1)
@@ -582,7 +600,7 @@ class main_controller
 
 		$now = time();
 		$bans_table = $this->table_prefix . 'advancedhide_bans';
-		$sql = 'SELECT ban_id FROM ' . $bans_table . '
+		$sql = 'SELECT ban_id, appeal_status FROM ' . $bans_table . '
 			WHERE post_id = ' . (int)$post_id . '
 				AND block_index = ' . (int)$block_id . '
 				AND user_id = ' . (int)$user_id . '
@@ -591,15 +609,27 @@ class main_controller
 		$ban = $this->db->sql_fetchrow($res);
 		$this->db->sql_freeresult($res);
 
-		if ($ban)
+		if (!$ban)
 		{
-			$sql_up = 'UPDATE ' . $bans_table . "
-				SET appeal_status = 'pending',
-					appeal_reason = '" . $this->db->sql_escape($reason) . "',
-					appeal_time = " . $now . '
-				WHERE ban_id = ' . (int)$ban['ban_id'];
-			$this->db->sql_query($sql_up);
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('NOT_AUTHORISED')], 403);
 		}
+
+		if ($ban['appeal_status'] === 'rejected')
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('ADVHIDE_APPEAL_REJECTED')], 403);
+		}
+
+		if ($ban['appeal_status'] === 'pending')
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_APPEAL_SUBMITTED')], 200);
+		}
+
+		$sql_up = 'UPDATE ' . $bans_table . "
+			SET appeal_status = 'pending',
+				appeal_reason = '" . $this->db->sql_escape($reason) . "',
+				appeal_time = " . $now . '
+			WHERE ban_id = ' . (int)$ban['ban_id'];
+		$this->db->sql_query($sql_up);
 
 		$reports_table = $this->table_prefix . 'advancedhide_reports';
 		$sql_ary = [

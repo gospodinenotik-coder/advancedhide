@@ -112,4 +112,12 @@ $lang = array_merge($lang, [
 	'ADVHIDE_APPEAL_STATUS'             => 'Статус апелляции',
 	'ADVHIDE_BUILDER_PREVIEW'           => 'Предпросмотр тега',
 	'ADVHIDE_BUILDER_CLOSE'             => 'Закрыть',
+	'ADVHIDE_AUDIT_UNLOCKED'            => 'Успешно разблокировано',
+	'ADVHIDE_AUDIT_SUCCESS'             => 'Успешно разблокировано',
+	'ADVHIDE_AUDIT_FAILED'              => 'Неверный пароль',
+	'ADVHIDE_AUDIT_RATE_LIMITED'        => 'Превышен лимит (Rate Limit)',
+	'ADVHIDE_AUDIT_CAPTCHA_FAILED'      => 'Ошибка ввода капчи',
+	'ADVHIDE_AUDIT_CAPTCHA_ERROR'       => 'Ошибка ввода капчи',
+	'ADVHIDE_AUDIT_BANNED'              => 'Заблокирован',
+	'ADVHIDE_AUDIT_CONDITIONS_FAILED'   => 'Условия не выполнены',
 ]);

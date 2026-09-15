@@ -47,6 +47,7 @@ $lang = array_merge($lang, [
 	'ADVHIDE_AUDIT_CAPTCHA_REQUIRED'    => 'Запрос капчи',
 	'ADVHIDE_AUDIT_CAPTCHA_FAILED'      => 'Ошибка ввода капчи',
 	'ADVHIDE_AUDIT_BANNED'              => 'Заблокирован',
+	'ADVHIDE_AUDIT_CONDITIONS_FAILED'   => 'Условия не выполнены',
 	'ADVHIDE_BAN_USER'                  => 'Заблокировать доступ к блоку',
 	'ADVHIDE_BAN_REASON'                => 'Причина блокировки',
 	'ADVHIDE_BAN_EXPIRES'               => 'Срок блокировки (в днях, 0 — навсегда)',

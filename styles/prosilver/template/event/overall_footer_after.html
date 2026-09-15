@@ -426,10 +426,12 @@
 				if (res.logs && res.logs.length > 0) {
 					$.each(res.logs, function(i, log) {
 						var color = '#333';
-						if (log.status_raw === 'unlocked') color = '#2e7d32';
+						if (log.status_raw === 'unlocked' || log.status_raw === 'success') color = '#2e7d32';
 						else if (log.status_raw === 'failed') color = '#c62828';
 						else if (log.status_raw === 'rate_limited') color = '#ef6c00';
 						else if (log.status_raw === 'banned') color = '#ad1457';
+						else if (log.status_raw === 'conditions_failed') color = '#e65100';
+						else if (log.status_raw === 'captcha_failed' || log.status_raw === 'captcha_error') color = '#d84315';
 
 						logsHtml += '<tr>' +
 							'<td>' + log.attempt_time + '</td>' +

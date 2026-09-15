@@ -41,6 +41,7 @@ $lang = array_merge($lang, [
 	'ADVHIDE_AUDIT_CAPTCHA_REQUIRED'    => 'Captcha Required',
 	'ADVHIDE_AUDIT_CAPTCHA_FAILED'      => 'Captcha Failed',
 	'ADVHIDE_AUDIT_BANNED'              => 'Banned',
+	'ADVHIDE_AUDIT_CONDITIONS_FAILED'   => 'Conditions not met',
 	'ADVHIDE_BAN_USER'                  => 'Ban User from Block',
 	'ADVHIDE_BAN_REASON'                => 'Ban Reason',
 	'ADVHIDE_BAN_EXPIRES'               => 'Duration (days, 0 = permanent)',
