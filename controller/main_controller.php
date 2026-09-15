@@ -58,11 +58,7 @@ class main_controller
 		{
 			return str_repeat('*', max(1, $len));
 		}
-		if ($len <= 5)
-		{
-			return mb_substr($pass, 0, 1) . '***' . mb_substr($pass, -1);
-		}
-		return mb_substr($pass, 0, 2) . '***' . mb_substr($pass, -1);
+		return mb_substr($pass, 0, 1) . '******' . mb_substr($pass, -1);
 	}
 
 	protected function log_attempt($post_id, $block_index, $user_id, $ip, $status, $entered_pass = '')
@@ -74,40 +70,62 @@ class main_controller
 		$status = substr((string)$status, 0, 32);
 		$masked = $entered_pass !== '' ? $this->mask_password($entered_pass) : '';
 		$now = time();
-		$hour_start = (int)(floor($now / 3600) * 3600);
+		$window_start = $now - 300; // 5-минутное окно схлопывания для активной серии
 
 		$table = $this->table_prefix . 'advancedhide_logs';
 
-		$sql = 'SELECT log_id, attempt_count FROM ' . $table . '
+		$sql = 'SELECT log_id, attempt_count, aggregated_count, details_json FROM ' . $table . '
 			WHERE post_id = ' . $post_id . '
 				AND block_index = ' . $block_index . '
 				AND user_id = ' . $user_id . '
-				AND user_ip = \'' . $this->db->sql_escape($ip) . '\'
-				AND status = \'' . $this->db->sql_escape($status) . '\'
-				AND attempt_time >= ' . $hour_start;
+				AND attempt_time >= ' . $window_start . '
+			ORDER BY attempt_time DESC';
 		$result = $this->db->sql_query_limit($sql, 1);
 		$existing = $this->db->sql_fetchrow($result);
 		$this->db->sql_freeresult($result);
 
 		if ($existing)
 		{
-			$sql = 'UPDATE ' . $table . '
-				SET attempt_count = attempt_count + 1,
-					attempt_time = ' . $now . '
-				WHERE log_id = ' . (int)$existing['log_id'];
+			$details = !empty($existing['details_json']) ? (array)@json_decode($existing['details_json'], true) : [];
+			$details[] = [
+				'time' => $now,
+				'ip'   => $ip,
+				'pass' => $masked,
+			];
+			$new_count = ((int)($existing['aggregated_count'] ?: $existing['attempt_count'])) + 1;
+
+			$sql = 'UPDATE ' . $table . "
+				SET attempt_count = " . $new_count . ",
+					aggregated_count = " . $new_count . ",
+					details_json = '" . $this->db->sql_escape(json_encode($details)) . "',
+					attempt_time = " . $now . ",
+					status = '" . $this->db->sql_escape($status) . "',
+					masked_pass = '" . $this->db->sql_escape($masked) . "',
+					password_used = '" . $this->db->sql_escape($masked) . "'
+				WHERE log_id = " . (int)$existing['log_id'];
 			$this->db->sql_query($sql);
 		}
 		else
 		{
+			$details = [
+				[
+					'time' => $now,
+					'ip'   => $ip,
+					'pass' => $masked,
+				]
+			];
 			$sql_ary = [
-				'post_id'       => $post_id,
-				'block_index'   => $block_index,
-				'user_id'       => $user_id,
-				'user_ip'       => $ip,
-				'attempt_time'  => $now,
-				'status'        => $status,
-				'masked_pass'   => $masked,
-				'attempt_count' => 1,
+				'post_id'          => $post_id,
+				'block_index'      => $block_index,
+				'user_id'          => $user_id,
+				'user_ip'          => $ip,
+				'attempt_time'     => $now,
+				'status'           => $status,
+				'masked_pass'      => $masked,
+				'password_used'    => $masked,
+				'attempt_count'    => 1,
+				'aggregated_count' => 1,
+				'details_json'     => json_encode($details),
 			];
 			$this->db->sql_query('INSERT INTO ' . $table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
 		}
@@ -426,14 +444,14 @@ class main_controller
 
 		$post_id         = $this->request->variable('post_id', 0);
 		$block_id        = $this->request->variable('block_id', 0);
-		$target_user_id  = $this->request->variable('user_id', 0);
+		$target_user_id  = $this->request->variable('user_id', 0) ?: $this->request->variable('target_user_id', 0);
 		$target_username = $this->request->variable('username', '', true);
 		$days            = $this->request->variable('days', 0);
 		$reason          = $this->request->variable('reason', '', true);
 		$action          = $this->request->variable('action', 'ban');
 		$ban_id          = $this->request->variable('ban_id', 0);
 
-		$sql = 'SELECT poster_id, forum_id FROM ' . POSTS_TABLE . ' WHERE post_id = ' . (int)$post_id;
+		$sql = 'SELECT poster_id, forum_id, topic_id FROM ' . POSTS_TABLE . ' WHERE post_id = ' . (int)$post_id;
 		$res = $this->db->sql_query($sql);
 		$post = $this->db->sql_fetchrow($res);
 		$this->db->sql_freeresult($res);
@@ -446,7 +464,7 @@ class main_controller
 		$forum_id        = (int)$post['forum_id'];
 		$poster_id       = (int)$post['poster_id'];
 		$current_user_id = (int)$this->user->data['user_id'];
-		$is_mod          = $this->auth->acl_get('m_hide_ban', $forum_id);
+		$is_mod          = $this->auth->acl_get('m_hide_ban', $forum_id) || $this->auth->acl_get('m_hide_override', $forum_id) || $this->auth->acl_get('a_');
 		$is_author       = ($poster_id > 0 && $current_user_id === $poster_id);
 
 		if (!$is_mod && !$is_author)
@@ -479,7 +497,12 @@ class main_controller
 
 		$this->auth_service->add_block_ban($post_id, $block_id, $target_user_id, $current_user_id, $days, $reason);
 
-		return new JsonResponse(['success' => true, 'message' => $this->language->lang('ADVHIDE_BAN_SUCCESS')]);
+		if (function_exists('add_log'))
+		{
+			add_log('mod', $forum_id, (int)$post['topic_id'], 'LOG_ADVHIDE_BAN_USER', (string)$target_user_id, (string)$post_id, (string)$block_id);
+		}
+
+		return new JsonResponse(['success' => true, 'message' => $this->language->lang('HIDE_BAN_SUCCESS')]);
 	}
 
 	public function report_bruteforce()
@@ -498,24 +521,41 @@ class main_controller
 		$block_id = $this->request->variable('block_id', 0);
 		$reason   = $this->request->variable('reason', '', true);
 
-		$user_id = (int)$this->user->data['user_id'];
-		if ($user_id <= 1)
+		$sql = 'SELECT poster_id, forum_id, topic_id FROM ' . POSTS_TABLE . ' WHERE post_id = ' . (int)$post_id;
+		$res = $this->db->sql_query($sql);
+		$post = $this->db->sql_fetchrow($res);
+		$this->db->sql_freeresult($res);
+
+		if (!$post)
 		{
-			return new JsonResponse(['success' => false, 'message' => $this->language->lang('NOT_AUTHORISED')], 403);
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 404);
+		}
+
+		$current_user_id = (int)$this->user->data['user_id'];
+		$poster_id       = (int)$post['poster_id'];
+		$forum_id        = (int)$post['forum_id'];
+
+		$is_author = ($poster_id > 0 && $current_user_id === $poster_id);
+		$is_mod    = $this->auth->acl_get('m_hide_override', $forum_id) || $this->auth->acl_get('m_hide_ban', $forum_id);
+
+		if (!$is_author && !$is_mod)
+		{
+			return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);
 		}
 
 		$reports_table = $this->table_prefix . 'advancedhide_reports';
 		$sql_ary = [
 			'post_id'       => (int)$post_id,
 			'block_index'   => (int)$block_id,
-			'reporter_id'   => $user_id,
+			'reporter_id'   => $current_user_id,
 			'report_time'   => time(),
 			'report_reason' => $reason,
+			'report_status' => 'open',
 			'report_closed' => 0,
 		];
 		$this->db->sql_query('INSERT INTO ' . $reports_table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
 
-		return new JsonResponse(['success' => true, 'message' => $this->language->lang('ADVHIDE_REPORT_SUBMITTED')]);
+		return new JsonResponse(['success' => true, 'message' => $this->language->lang('HIDE_REPORT_SUBMITTED')]);
 	}
 
 	public function submit_appeal()
@@ -540,17 +580,39 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('NOT_AUTHORISED')], 403);
 		}
 
+		$now = time();
+		$bans_table = $this->table_prefix . 'advancedhide_bans';
+		$sql = 'SELECT ban_id FROM ' . $bans_table . '
+			WHERE post_id = ' . (int)$post_id . '
+				AND block_index = ' . (int)$block_id . '
+				AND user_id = ' . (int)$user_id . '
+				AND (ban_end = 0 OR ban_end > ' . $now . ')';
+		$res = $this->db->sql_query_limit($sql, 1);
+		$ban = $this->db->sql_fetchrow($res);
+		$this->db->sql_freeresult($res);
+
+		if ($ban)
+		{
+			$sql_up = 'UPDATE ' . $bans_table . "
+				SET appeal_status = 'pending',
+					appeal_reason = '" . $this->db->sql_escape($reason) . "',
+					appeal_time = " . $now . '
+				WHERE ban_id = ' . (int)$ban['ban_id'];
+			$this->db->sql_query($sql_up);
+		}
+
 		$reports_table = $this->table_prefix . 'advancedhide_reports';
 		$sql_ary = [
 			'post_id'       => (int)$post_id,
 			'block_index'   => (int)$block_id,
 			'reporter_id'   => $user_id,
-			'report_time'   => time(),
+			'report_time'   => $now,
 			'report_reason' => '[APPEAL] ' . $reason,
+			'report_status' => 'pending',
 			'report_closed' => 0,
 		];
 		$this->db->sql_query('INSERT INTO ' . $reports_table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
 
-		return new JsonResponse(['success' => true, 'message' => $this->language->lang('ADVHIDE_APPEAL_SUBMITTED')]);
+		return new JsonResponse(['success' => true, 'message' => $this->language->lang('HIDE_APPEAL_SUBMITTED')]);
 	}
 }

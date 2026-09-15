@@ -74,8 +74,24 @@
 					<td>{bans.MOD_USERNAME}</td>
 					<td>{bans.BAN_START}</td>
 					<td>{bans.BAN_END}</td>
-					<td>{bans.REASON}</td>
-					<td><a href="{bans.U_UNBAN}" class="button2" onclick="return confirm('{L_CONFIRM_OPERATION}');">{L_ADVHIDE_UNBAN_BTN}</a></td>
+					<td>
+						{bans.REASON}
+						<!-- IF bans.APPEAL_STATUS -->
+							<div style="margin-top: 5px; padding: 4px 6px; background: #fffde7; border: 1px solid #ffd54f; border-radius: 3px; font-size: 11px;">
+								<strong>{L_ADVHIDE_APPEAL_STATUS}:</strong> {bans.APPEAL_STATUS}
+								<!-- IF bans.APPEAL_REASON --><br /><em>"{bans.APPEAL_REASON}"</em><!-- ENDIF -->
+								<!-- IF bans.APPEAL_TIME --><br /><span style="color:#777;">({bans.APPEAL_TIME})</span><!-- ENDIF -->
+							</div>
+						<!-- ENDIF -->
+					</td>
+					<td>
+						<!-- IF bans.APPEAL_STATUS eq 'pending' -->
+							<a href="{bans.U_UNBAN}" class="button2" onclick="return confirm('{L_CONFIRM_OPERATION}');">{L_ADVHIDE_ACCEPT_APPEAL}</a>
+							<a href="{bans.U_REJECT}" class="button2" onclick="return confirm('{L_CONFIRM_OPERATION}');">{L_ADVHIDE_REJECT_APPEAL}</a>
+						<!-- ELSE -->
+							<a href="{bans.U_UNBAN}" class="button2" onclick="return confirm('{L_CONFIRM_OPERATION}');">{L_ADVHIDE_UNBAN_BTN}</a>
+						<!-- ENDIF -->
+					</td>
 				</tr>
 			<!-- END bans -->
 		</tbody>
@@ -118,8 +134,16 @@
 						{logs.STATUS}
 					<!-- ENDIF -->
 				</td>
-				<td>{logs.ATTEMPT_COUNT}</td>
-				<td><code>{logs.MASKED_PASS}</code></td>
+				<td>
+					{logs.AGGREGATED_COUNT}
+					<!-- IF logs.AGGREGATED_COUNT > 1 -->
+						<button type="button" class="advhide-toggle-details" style="cursor:pointer; padding:1px 5px; font-size:10px; margin-left:4px; vertical-align:middle;">▼</button>
+						<div class="advhide-aggregated-details" style="display:none; margin-top:4px; font-size:11px; color:#555; background:#f9f9f9; padding:4px 6px; border:1px solid #ddd; border-radius:3px;">
+							{logs.DETAILS_FORMATTED}
+						</div>
+					<!-- ENDIF -->
+				</td>
+				<td><code>{logs.PASSWORD_USED}</code></td>
 			</tr>
 		<!-- BEGINELSE -->
 			<tr>
@@ -128,5 +152,21 @@
 		<!-- END logs -->
 	</tbody>
 </table>
+
+<script>
+document.querySelectorAll('.advhide-toggle-details').forEach(function(btn) {
+	btn.addEventListener('click', function(e) {
+		e.preventDefault();
+		var details = this.nextElementSibling;
+		if (details.style.display === 'none') {
+			details.style.display = 'block';
+			this.textContent = '▲';
+		} else {
+			details.style.display = 'none';
+			this.textContent = '▼';
+		}
+	});
+});
+</script>
 
 <!-- INCLUDE overall_footer.html -->

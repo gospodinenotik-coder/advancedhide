@@ -50,6 +50,7 @@ class reparse extends Command
 			$batch_size = 200;
 		}
 
+		$output->writeln('<info>AdvancedHide Content Reparser</info>');
 		$output->writeln('<info>Starting AdvancedHide post reparse...</info>');
 
 		$posts_table = $this->table_prefix . 'posts';
@@ -114,6 +115,7 @@ class reparse extends Command
 			$output->writeln(sprintf('Processed: %d / %d (Updated: %d)', $processed, $total_posts, $updated));
 		}
 
+		$output->writeln(sprintf('<info>[OK] Reparsing complete. Synchronized %d posts.</info>', $updated));
 		$output->writeln(sprintf('<info>Done! Reparsed %d posts, updated %d posts.</info>', $processed, $updated));
 
 		return 0;

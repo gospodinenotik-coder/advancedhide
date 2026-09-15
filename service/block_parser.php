@@ -161,7 +161,7 @@ class block_parser
 			$sub = explode(',', trim($part));
 			$type = strtolower(trim($sub[0] ?? ''));
 
-			if ($type === 'users' && count($sub) > 1)
+			if (($type === 'users' || $type === 'not_users') && count($sub) > 1)
 			{
 				$uids = [];
 				$usernames = [];
@@ -198,7 +198,7 @@ class block_parser
 					}
 				}
 				$uids = array_unique(array_filter($uids));
-				$new_parts[] = 'users,' . (!empty($uids) ? implode(',', $uids) : '0');
+				$new_parts[] = $type . ',' . (!empty($uids) ? implode(',', $uids) : '0');
 			}
 			elseif ($type === 'pass')
 			{

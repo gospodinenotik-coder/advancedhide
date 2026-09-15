@@ -45,6 +45,13 @@ class main_module
 				trigger_error($language->lang('ADVHIDE_UNBAN_SUCCESS') . adm_back_link($this->u_action));
 			}
 
+			if ($action === 'reject_appeal' && $ban_id > 0 && check_link_hash($request->variable('hash', ''), 'reject_advhide_' . $ban_id))
+			{
+				$sql = "UPDATE " . $table_prefix . "advancedhide_bans SET appeal_status = 'rejected' WHERE ban_id = " . (int)$ban_id;
+				$db->sql_query($sql);
+				trigger_error($language->lang('ADVHIDE_APPEAL_REJECTED') . adm_back_link($this->u_action));
+			}
+
 			if ($action === 'close_report' && $report_id > 0 && check_link_hash($request->variable('hash', ''), 'close_advhide_rep_' . $report_id))
 			{
 				$sql = 'UPDATE ' . $table_prefix . 'advancedhide_reports SET report_closed = 1 WHERE report_id = ' . (int)$report_id;
@@ -72,18 +79,35 @@ class main_module
 				$status_key = 'ADVHIDE_AUDIT_' . strtoupper($row['status']);
 				$status_text = $language->is_set($status_key) ? $language->lang($status_key) : $row['status'];
 
+				$details_formatted = '';
+				if (!empty($row['details_json']))
+				{
+					$ts_ary = json_decode($row['details_json'], true);
+					if (is_array($ts_ary))
+					{
+						$formatted_list = array_map(function($t) use ($user) {
+							return is_numeric($t) ? $user->format_date((int)$t) : (string)$t;
+						}, $ts_ary);
+						$details_formatted = implode('<br />', $formatted_list);
+					}
+				}
+
 				$template->assign_block_vars('logs', [
-					'LOG_ID'        => (int)$row['log_id'],
-					'POST_ID'       => (int)$row['post_id'],
-					'BLOCK_INDEX'   => (int)$row['block_index'],
-					'USERNAME'      => !empty($row['username']) ? get_username_string('full', $row['user_id'], $row['username'], $row['user_colour']) : $language->lang('GUEST'),
-					'USER_IP'       => $row['user_ip'],
-					'TIME'          => $user->format_date($row['attempt_time']),
-					'STATUS'        => $status_text,
-					'STATUS_RAW'    => $row['status'],
-					'ATTEMPT_COUNT' => (int)$row['attempt_count'],
-					'MASKED_PASS'   => $row['masked_pass'],
-					'U_POST'        => append_sid("{$phpbb_root_path}viewtopic.$php_ext", 'p=' . $row['post_id'] . '#p' . $row['post_id']),
+					'LOG_ID'            => (int)$row['log_id'],
+					'POST_ID'           => (int)$row['post_id'],
+					'BLOCK_INDEX'       => (int)$row['block_index'],
+					'USERNAME'          => !empty($row['username']) ? get_username_string('full', $row['user_id'], $row['username'], $row['user_colour']) : $language->lang('GUEST'),
+					'USER_IP'           => $row['user_ip'],
+					'TIME'              => $user->format_date($row['attempt_time']),
+					'STATUS'            => $status_text,
+					'STATUS_RAW'        => $row['status'],
+					'ATTEMPT_COUNT'     => (int)$row['attempt_count'],
+					'AGGREGATED_COUNT'  => (int)($row['aggregated_count'] ?? $row['attempt_count'] ?? 1),
+					'DETAILS_JSON'      => !empty($row['details_json']) ? $row['details_json'] : '',
+					'DETAILS_FORMATTED' => $details_formatted,
+					'MASKED_PASS'       => $row['masked_pass'],
+					'PASSWORD_USED'     => !empty($row['password_used']) ? $row['password_used'] : $row['masked_pass'],
+					'U_POST'            => append_sid("{$phpbb_root_path}viewtopic.$php_ext", 'p=' . $row['post_id'] . '#p' . $row['post_id']),
 				]);
 			}
 			$db->sql_freeresult($res);
@@ -99,15 +123,19 @@ class main_module
 			while ($row_b = $db->sql_fetchrow($res_b))
 			{
 				$template->assign_block_vars('bans', [
-					'BAN_ID'       => (int)$row_b['ban_id'],
-					'POST_ID'      => (int)$row_b['post_id'],
-					'BLOCK_INDEX'  => (int)$row_b['block_index'],
-					'USERNAME'     => get_username_string('full', $row_b['user_id'], $row_b['username'], $row_b['user_colour']),
-					'MOD_USERNAME' => get_username_string('full', $row_b['banned_by'], $row_b['mod_username'], $row_b['mod_colour']),
-					'BAN_START'    => $user->format_date($row_b['ban_start']),
-					'BAN_END'      => $row_b['ban_end'] > 0 ? $user->format_date($row_b['ban_end']) : $language->lang('ADVHIDE_BAN_PERMANENT'),
-					'REASON'       => $row_b['ban_reason'],
-					'U_UNBAN'      => $this->u_action . '&amp;action=unban&amp;ban_id=' . $row_b['ban_id'] . '&amp;hash=' . generate_link_hash('unban_advhide_' . $row_b['ban_id']),
+					'BAN_ID'        => (int)$row_b['ban_id'],
+					'POST_ID'       => (int)$row_b['post_id'],
+					'BLOCK_INDEX'   => (int)$row_b['block_index'],
+					'USERNAME'      => get_username_string('full', $row_b['user_id'], $row_b['username'], $row_b['user_colour']),
+					'MOD_USERNAME'  => get_username_string('full', $row_b['banned_by'], $row_b['mod_username'], $row_b['mod_colour']),
+					'BAN_START'     => $user->format_date($row_b['ban_start']),
+					'BAN_END'       => $row_b['ban_end'] > 0 ? $user->format_date($row_b['ban_end']) : $language->lang('ADVHIDE_BAN_PERMANENT'),
+					'REASON'        => $row_b['ban_reason'],
+					'APPEAL_STATUS' => $row_b['appeal_status'] ?? '',
+					'APPEAL_REASON' => $row_b['appeal_reason'] ?? '',
+					'APPEAL_TIME'   => !empty($row_b['appeal_time']) ? $user->format_date($row_b['appeal_time']) : '',
+					'U_UNBAN'       => $this->u_action . '&amp;action=unban&amp;ban_id=' . $row_b['ban_id'] . '&amp;hash=' . generate_link_hash('unban_advhide_' . $row_b['ban_id']),
+					'U_REJECT'      => $this->u_action . '&amp;action=reject_appeal&amp;ban_id=' . $row_b['ban_id'] . '&amp;hash=' . generate_link_hash('reject_advhide_' . $row_b['ban_id']),
 				]);
 			}
 			$db->sql_freeresult($res_b);

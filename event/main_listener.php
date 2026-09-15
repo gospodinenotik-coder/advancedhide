@@ -267,8 +267,9 @@ class main_listener implements EventSubscriberInterface
 		$form_token = sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_unlock' . $token_sid);
 
 		$locked_attachment_ids = [];
+		$locked_attachment_names = [];
 		$idx = 0;
-		$processed = preg_replace_callback('/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now, $is_mod, $is_author, $viewer_id, &$locked_attachment_ids) {
+		$processed = preg_replace_callback('/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now, $is_mod, $is_author, $viewer_id, &$locked_attachment_ids, &$locked_attachment_names) {
 			$idx++;
 
 			if (!isset($blocks[$idx - 1]))
@@ -304,11 +305,43 @@ class main_listener implements EventSubscriberInterface
 			}
 
 			// Блок заблокирован - защищаем вложения
-			if (preg_match_all('/\[attachment=(\d+)\]/i', $block->content, $att_m))
+			if (preg_match_all('/\[attachment=(\d+)(?::[^\]]*)?\](.*?)(?:\[\/attachment(?::[^\]]*)?\])?/is', $block->content, $att_m))
 			{
 				foreach ($att_m[1] as $aid)
 				{
 					$locked_attachment_ids[] = (int)$aid;
+				}
+				foreach ($att_m[2] as $aname)
+				{
+					$tname = trim(strip_tags($aname));
+					if ($tname !== '')
+					{
+						$locked_attachment_names[] = strtolower($tname);
+					}
+				}
+			}
+
+			if (preg_match_all('#<!-- ia(\d+) -->([^<]+)<!-- ia\1 -->#i', $m[2], $ia_m))
+			{
+				foreach ($ia_m[1] as $aid)
+				{
+					$locked_attachment_ids[] = (int)$aid;
+				}
+				foreach ($ia_m[2] as $aname)
+				{
+					$tname = trim(strip_tags($aname));
+					if ($tname !== '')
+					{
+						$locked_attachment_names[] = strtolower($tname);
+					}
+				}
+			}
+
+			if (preg_match_all('/\b([\w\.\-]+\.(?:zip|rar|7z|tar|gz|pdf|txt|docx?|xlsx?|png|jpe?g|gif))\b/i', $block->content . ' ' . $m[2], $fn_m))
+			{
+				foreach ($fn_m[1] as $fn)
+				{
+					$locked_attachment_names[] = strtolower(trim($fn));
 				}
 			}
 
@@ -375,6 +408,73 @@ class main_listener implements EventSubscriberInterface
 		}, $text);
 
 		// Устранение утечки вложений из закрытых блоков
+		$attachments = isset($event['attachments']) && is_array($event['attachments']) ? $event['attachments'] : [];
+		$post_id = (int)$row['post_id'];
+
+		if ((!empty($locked_attachment_ids) || !empty($locked_attachment_names)) && !empty($attachments[$post_id]) && is_array($attachments[$post_id]))
+		{
+			foreach ($attachments[$post_id] as $k => $att)
+			{
+				$should_unset = false;
+				if (in_array($k, $locked_attachment_ids, true))
+				{
+					$should_unset = true;
+				}
+				elseif (is_array($att))
+				{
+					if (isset($att['attach_id']) && in_array((int)$att['attach_id'], $locked_attachment_ids, true))
+					{
+						$should_unset = true;
+					}
+					elseif (isset($att['real_filename']) && in_array(strtolower($att['real_filename']), $locked_attachment_names, true))
+					{
+						$should_unset = true;
+					}
+				}
+				elseif (is_string($att))
+				{
+					$att_lower = strtolower($att);
+					foreach ($locked_attachment_names as $fname)
+					{
+						if (strpos($att_lower, $fname) !== false)
+						{
+							$should_unset = true;
+							break;
+						}
+					}
+					if (!$should_unset)
+					{
+						foreach ($locked_attachment_ids as $aid)
+						{
+							if (strpos($att, 'id=' . $aid) !== false)
+							{
+								$should_unset = true;
+								break;
+							}
+						}
+					}
+				}
+
+				if ($should_unset)
+				{
+					unset($attachments[$post_id][$k]);
+				}
+			}
+
+			if (empty($attachments[$post_id]))
+			{
+				$post_row['S_HAS_ATTACHMENTS'] = false;
+				$post_row['S_MULTIPLE_ATTACHMENTS'] = false;
+			}
+			else
+			{
+				$post_row['S_HAS_ATTACHMENTS'] = true;
+				$post_row['S_MULTIPLE_ATTACHMENTS'] = (count($attachments[$post_id]) > 1);
+			}
+
+			$event['attachments'] = $attachments;
+		}
+
 		if (!empty($locked_attachment_ids) && isset($post_row['ATTACHMENTS']) && is_array($post_row['ATTACHMENTS']))
 		{
 			foreach ($post_row['ATTACHMENTS'] as $k => $att)
@@ -383,6 +483,11 @@ class main_listener implements EventSubscriberInterface
 				{
 					unset($post_row['ATTACHMENTS'][$k]);
 				}
+			}
+			if (empty($post_row['ATTACHMENTS']))
+			{
+				$post_row['S_HAS_ATTACHMENTS'] = false;
+				$post_row['S_MULTIPLE_ATTACHMENTS'] = false;
 			}
 		}
 

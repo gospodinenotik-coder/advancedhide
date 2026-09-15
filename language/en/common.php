@@ -99,6 +99,13 @@ $lang = array_merge($lang, [
 	'HIDE_BAN_SUCCESS'                  => 'User has been banned from this block.',
 	'HIDE_REPORT_SUBMITTED'             => 'Brute-force report has been submitted to moderators.',
 	'HIDE_APPEAL_SUBMITTED'             => 'Appeal has been submitted for administrator review.',
+	'LOG_ADVHIDE_BAN_USER'              => '<strong>Banned user from hidden block</strong><br />» User ID: %1$s (Post: %2$s, Block: %3$s)',
+	'ADVHIDE_APPEAL_REJECTED'           => 'Appeal has been rejected.',
+	'ADVHIDE_STATUS_REJECTED'           => 'Rejected',
+	'ADVHIDE_ACCEPT_APPEAL'             => 'Accept Appeal (Unban)',
+	'ADVHIDE_REJECT_APPEAL'             => 'Reject Appeal',
+	'ADVHIDE_APPEAL_STATUS'             => 'Appeal Status',
+	'ADVHIDE_APPEAL_BTN'                => 'Appeal Ban',
 	'ADVHIDE_BUILDER_PREVIEW'           => 'Tag Preview',
 	'ADVHIDE_BUILDER_CLOSE'             => 'Close',
 ]);

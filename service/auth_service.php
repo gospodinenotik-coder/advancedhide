@@ -138,7 +138,8 @@ class auth_service
 
 	public function is_block_unlocked($post_id, hide_block $block)
 	{
-		$cache_key = '_advhide_unlock_' . $this->user->data['session_id'];
+		$session_id = !empty($this->user->data['session_id']) ? $this->user->data['session_id'] : ($this->user->session_id ?? 'guest');
+		$cache_key = '_advhide_unlock_' . $session_id;
 		$unlocked = $this->cache->get($cache_key) ?: [];
 
 		if (empty($unlocked[$post_id][$block->block_index]))
@@ -152,7 +153,8 @@ class auth_service
 
 	public function unlock_block($post_id, hide_block $block)
 	{
-		$cache_key = '_advhide_unlock_' . $this->user->data['session_id'];
+		$session_id = !empty($this->user->data['session_id']) ? $this->user->data['session_id'] : ($this->user->session_id ?? 'guest');
+		$cache_key = '_advhide_unlock_' . $session_id;
 		$unlocked = $this->cache->get($cache_key) ?: [];
 		$unlocked[$post_id][$block->block_index] = $block->block_hash;
 		$this->cache->put($cache_key, $unlocked, 1800);
