@@ -67,6 +67,7 @@ class main_listener implements EventSubscriberInterface
 	public function load_language($event)
 	{
 		$this->language->add_lang('common', 'vendor/advancedhide');
+		$this->language->add_lang('permissions_advancedhide', 'vendor/advancedhide');
 	}
 
 	public function assign_common_vars($event)
@@ -103,27 +104,13 @@ class main_listener implements EventSubscriberInterface
 
 	public function register_permissions($event)
 	{
+		$this->language->add_lang('permissions_advancedhide', 'vendor/advancedhide');
 		$permissions = $event['permissions'];
-		$permissions['m_hide_override'] = [
-			'lang' => 'ACL_M_HIDE_OVERRIDE',
-			'cat'  => 'misc',
-		];
-		$permissions['u_hide_use'] = [
-			'lang' => 'ACL_U_HIDE_USE',
-			'cat'  => 'post',
-		];
-		$permissions['u_hide_pass'] = [
-			'lang' => 'ACL_U_HIDE_PASS',
-			'cat'  => 'post',
-		];
-		$permissions['f_hide_post'] = [
-			'lang' => 'ACL_F_HIDE_POST',
-			'cat'  => 'post',
-		];
-		$permissions['m_hide_ban'] = [
-			'lang' => 'ACL_M_HIDE_BAN',
-			'cat'  => 'misc',
-		];
+		$permissions['m_hide_override'] = ['lang' => 'ACL_M_HIDE_OVERRIDE', 'cat' => 'misc'];
+		$permissions['m_hide_ban']      = ['lang' => 'ACL_M_HIDE_BAN',      'cat' => 'post_actions'];
+		$permissions['u_hide_use']      = ['lang' => 'ACL_U_HIDE_USE',      'cat' => 'post'];
+		$permissions['u_hide_pass']     = ['lang' => 'ACL_U_HIDE_PASS',     'cat' => 'post'];
+		$permissions['f_hide_post']     = ['lang' => 'ACL_F_HIDE_POST',     'cat' => 'post'];
 		$event['permissions'] = $permissions;
 	}
 
