@@ -71,11 +71,8 @@ class main_listener implements EventSubscriberInterface
 
 	public function assign_common_vars($event)
 	{
-<<<<<<< HEAD
 		add_form_key('advancedhide_unlock');
 
-=======
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 		$modules = ['guest', 'posts', 'days', 'time', 'regdate', 'reply', 'thanks', 'groups', 'users', 'pass'];
 		$vars = [
 			'U_ADVANCEDHIDE_UNLOCK'   => append_sid($this->phpbb_root_path . 'app.' . $this->php_ext . '/advancedhide/unlock'),
@@ -96,11 +93,7 @@ class main_listener implements EventSubscriberInterface
 		$permissions = $event['permissions'];
 		$permissions['m_hide_override'] = [
 			'lang' => 'ACL_M_HIDE_OVERRIDE',
-<<<<<<< HEAD
 			'cat'  => 'misc',
-=======
-			'cat'  => 'misc'
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 		];
 		$event['permissions'] = $permissions;
 	}
@@ -137,12 +130,8 @@ class main_listener implements EventSubscriberInterface
 			return;
 		}
 
-<<<<<<< HEAD
 		$clean_message = preg_replace('/\[code(?:=[^\]]*)?\].*?\[\/code\]/is', '', $message);
 		$blocks = $this->parser->parse_blocks($clean_message);
-=======
-		$blocks = $this->parser->parse_blocks($message);
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 		$pass_count = 0;
 		foreach ($blocks as $b)
 		{
@@ -214,11 +203,7 @@ class main_listener implements EventSubscriberInterface
 		$context = [
 			'forum_id'  => (int)$row['forum_id'],
 			'topic_id'  => (int)$row['topic_id'],
-<<<<<<< HEAD
 			'post_id'   => $post_id,
-=======
-			'post_id'   => (int)$row['post_id'],
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 			'poster_id' => (int)($event['poster_id'] ?? $row['user_id'] ?? $row['poster_id'] ?? 0),
 		];
 
@@ -227,12 +212,7 @@ class main_listener implements EventSubscriberInterface
 		$form_token = sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_unlock' . $token_sid);
 
 		$idx = 0;
-<<<<<<< HEAD
 		$has_locked_attachments = false;
-=======
-		$processed = preg_replace_callback('/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now) {
-			$idx++;
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 
 		$processed = preg_replace_callback('/<(?:hide)(?:\s+[^>]*(?:cond|hide)="([^"]*)")?[^>]*>(.*?)<\/(?:hide)>/is', function($m) use ($context, $blocks, &$idx, $form_token, $now, &$has_locked_attachments, &$attachments, $post_id) {
 			$idx++;
@@ -262,7 +242,6 @@ class main_listener implements EventSubscriberInterface
 					'</div>';
 			}
 
-<<<<<<< HEAD
 			// Block is locked: neutralize any attachments placed inside this block
 			if (!empty($attachments[$post_id]))
 			{
@@ -277,8 +256,6 @@ class main_listener implements EventSubscriberInterface
 				}
 			}
 
-=======
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 			if (!empty($eval['has_disabled_module']))
 			{
 				$reasons_html = '<ul class="hide-reasons">';
@@ -313,13 +290,8 @@ class main_listener implements EventSubscriberInterface
 					'<input type="hidden" class="hide-token" name="form_token" value="' . htmlspecialchars($form_token, ENT_QUOTES, 'UTF-8') . '" />' .
 					'<input type="hidden" class="hide-creation-time" name="creation_time" value="' . (int)$now . '" />' .
 					'<div class="hide-pass-row">' .
-<<<<<<< HEAD
 					'<input type="password" class="inputbox autowidth hide-pass-input" placeholder="' . htmlspecialchars($this->language->lang('HIDE_PASS_PLACEHOLDER'), ENT_QUOTES, 'UTF-8') . '" /> ' .
 					'<button type="button" class="button2 hide-pass-submit">' . htmlspecialchars($this->language->lang('HIDE_PASS_SUBMIT'), ENT_QUOTES, 'UTF-8') . '</button>' .
-=======
-						'<input type="password" class="inputbox autowidth hide-pass-input" placeholder="' . htmlspecialchars($this->language->lang('HIDE_PASS_PLACEHOLDER'), ENT_QUOTES, 'UTF-8') . '" /> ' .
-						'<button type="button" class="button2 hide-pass-submit">' . htmlspecialchars($this->language->lang('HIDE_PASS_SUBMIT'), ENT_QUOTES, 'UTF-8') . '</button>' .
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 					'</div>' .
 					'<div class="hide-captcha-slot">' . $captcha_html . '</div>' .
 					'<span class="hide-pass-msg"></span>' .
@@ -333,7 +305,6 @@ class main_listener implements EventSubscriberInterface
 		}, $text);
 
 		$post_row['MESSAGE'] = $processed;
-<<<<<<< HEAD
 
 		if ($has_locked_attachments)
 		{
@@ -344,8 +315,6 @@ class main_listener implements EventSubscriberInterface
 			$event['attachments'] = $attachments;
 		}
 
-=======
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 		$event['post_row'] = $post_row;
 	}
 

@@ -116,7 +116,6 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 400);
 		}
 
-		// Идентичность пользователя не привязывается к сетевому IP
 		$user_id = (int)$this->user->data['user_id'];
 		$session_id = !empty($this->user->session_id) ? $this->user->session_id : $this->user->ip;
 		$user_token = ($user_id > 1) ? 'u_' . $user_id : 's_' . $session_id;
@@ -129,11 +128,7 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_RATE_LIMIT_EXCEEDED')], 429);
 		}
 
-<<<<<<< HEAD
 		// Captcha Verification (Fail-Closed)
-=======
-		// Валидация Captcha (Fail-Closed c возвратом зарезервированного слота при сбое сервиса)
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 		if (!empty($this->config['advancedhide_enable_captcha']))
 		{
 			try
