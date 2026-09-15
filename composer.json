@@ -14,8 +14,13 @@
         }
     ],
     "require": {
-        "php": ">=7.2 <8.5",
+        "php": ">=7.4.0,<8.5.0",
         "composer/installers": "~1.0"
+    },
+    "require-dev": {
+        "phpbb/epv": "dev-master",
+        "phpstan/phpstan": "^1.10",
+        "phpbb/phpbb-coding-standards": "dev-master"
     },
     "support": {
         "issues": "https://github.com/gospodinenotik-coder/advancedhide/issues",
