@@ -1,166 +1,146 @@
-<!-- ADVANCEDHIDE MODALS & SCRIPTS -->
-<div id="advhide-builder-modal" class="advhide-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="advhide-builder-title">
-	<div class="advhide-modal-dialog">
+<div id="advhide-builder-modal" class="advhide-modal-overlay" style="display:none;">
+	<div class="advhide-modal-content">
 		<div class="advhide-modal-header">
-			<h3 id="advhide-builder-title"><i class="fa fa-shield"></i> {{ lang('ADVHIDE_BUILDER_TITLE') }}</h3>
-			<button type="button" class="advhide-modal-close" aria-label="{{ lang('CLOSE_WINDOW') }}">&times;</button>
+			<h3><i class="fa fa-magic"></i> {{ lang('ADVHIDE_BUILDER_TITLE') }}</h3>
+			<button type="button" class="advhide-modal-close" aria-label="Close">&times;</button>
 		</div>
 		<div class="advhide-modal-body">
-			<div class="advhide-builder-grid">
-				<label><input type="checkbox" id="bh-chk-guest" /> {{ lang('ADVHIDE_MOD_GUEST') }}</label>
-				<div class="bh-field">
-					<label><input type="checkbox" id="bh-chk-posts" /> {{ lang('ADVHIDE_MOD_POSTS') }}:</label>
-					<input type="number" id="bh-val-posts" min="1" placeholder="10" />
+			<form id="advhide-builder-form">
+				<div class="advhide-builder-grid">
+					{% if S_ADVHIDE_MOD_GUEST %}
+					<label class="advhide-cond-row">
+						<input type="checkbox" id="cond_guest" value="guest" checked="checked" />
+						<span><i class="fa {{ ADVHIDE_ICON_GUEST }}"></i> {{ lang('ADVHIDE_MOD_GUEST') }}</span>
+					</label>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_POSTS %}
+					<div class="advhide-cond-row">
+						<label><input type="checkbox" id="cond_posts_enable" /> <span><i class="fa {{ ADVHIDE_ICON_POSTS }}"></i> {{ lang('ADVHIDE_MOD_POSTS') }}</span></label>
+						<input type="number" id="cond_posts_val" class="inputbox tiny" value="10" min="1" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_DAYS %}
+					<div class="advhide-cond-row">
+						<label><input type="checkbox" id="cond_days_enable" /> <span><i class="fa {{ ADVHIDE_ICON_DAYS }}"></i> {{ lang('ADVHIDE_MOD_DAYS') }}</span></label>
+						<input type="number" id="cond_days_val" class="inputbox tiny" value="30" min="1" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_TIME %}
+					<div class="advhide-cond-row">
+						<label><input type="checkbox" id="cond_time_enable" /> <span><i class="fa {{ ADVHIDE_ICON_TIME }}"></i> {{ lang('ADVHIDE_MOD_TIME') }}</span></label>
+						<input type="text" id="cond_time_val" class="inputbox autowidth" value="2026-12-31 23:59:59" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_REGDATE %}
+					<div class="advhide-cond-row">
+						<label><input type="checkbox" id="cond_regdate_enable" /> <span><i class="fa {{ ADVHIDE_ICON_REGDATE }}"></i> {{ lang('ADVHIDE_MOD_REGDATE') }}</span></label>
+						<input type="text" id="cond_regdate_val" class="inputbox autowidth" value="2026-01-01" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_REPLY %}
+					<label class="advhide-cond-row">
+						<input type="checkbox" id="cond_reply" value="reply" />
+						<span><i class="fa {{ ADVHIDE_ICON_REPLY }}"></i> {{ lang('ADVHIDE_MOD_REPLY') }}</span>
+					</label>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_THANKS %}
+					<label class="advhide-cond-row">
+						<input type="checkbox" id="cond_thanks" value="thanks" />
+						<span><i class="fa {{ ADVHIDE_ICON_THANKS }}"></i> {{ lang('ADVHIDE_MOD_THANKS') }}</span>
+					</label>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_GROUPS %}
+					<div class="advhide-cond-row">
+						<label><input type="checkbox" id="cond_groups_enable" /> <span><i class="fa {{ ADVHIDE_ICON_GROUPS }}"></i> {{ lang('ADVHIDE_MOD_GROUPS') }}</span></label>
+						<input type="text" id="cond_groups_val" class="inputbox autowidth" placeholder="2, 5" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_USERS %}
+					<div class="advhide-cond-row">
+						<label><input type="checkbox" id="cond_users_enable" /> <span><i class="fa {{ ADVHIDE_ICON_USERS }}"></i> {{ lang('ADVHIDE_MOD_USERS') }}</span></label>
+						<input type="text" id="cond_users_val" class="inputbox autowidth" placeholder="admin, mod" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_NOT_GROUPS %}
+					<div class="advhide-cond-row">
+						<label><input type="checkbox" id="cond_not_groups_enable" /> <span><i class="fa {{ ADVHIDE_ICON_NOT_GROUPS }}"></i> {{ lang('ADVHIDE_MOD_NOT_GROUPS') }}</span></label>
+						<input type="text" id="cond_not_groups_val" class="inputbox autowidth" placeholder="4" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_NOT_USERS %}
+					<div class="advhide-cond-row">
+						<label><input type="checkbox" id="cond_not_users_enable" /> <span><i class="fa {{ ADVHIDE_ICON_NOT_USERS }}"></i> {{ lang('ADVHIDE_MOD_NOT_USERS') }}</span></label>
+						<input type="text" id="cond_not_users_val" class="inputbox autowidth" placeholder="spammer" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_PASS and S_ADVHIDE_CAN_PASS %}
+					<div class="advhide-cond-row">
+						<label><input type="checkbox" id="cond_pass_enable" /> <span><i class="fa {{ ADVHIDE_ICON_PASS }}"></i> {{ lang('ADVHIDE_MOD_PASS') }}</span></label>
+						<input type="text" id="cond_pass_val" class="inputbox autowidth" placeholder="Secret123" disabled="disabled" />
+					</div>
+					{% endif %}
 				</div>
-				<div class="bh-field">
-					<label><input type="checkbox" id="bh-chk-days" /> {{ lang('ADVHIDE_MOD_DAYS') }}:</label>
-					<input type="number" id="bh-val-days" min="1" placeholder="30" />
+
+				<div class="advhide-preview-box">
+					<label><strong>{{ lang('ADVHIDE_BUILDER_PREVIEW') }}:</strong></label>
+					<div id="advhide-builder-preview-text"><code>[hide]...[/hide]</code></div>
 				</div>
-				<label><input type="checkbox" id="bh-chk-reply" /> {{ lang('ADVHIDE_MOD_REPLY') }}</label>
-				<label><input type="checkbox" id="bh-chk-thanks" /> {{ lang('ADVHIDE_MOD_THANKS') }}</label>
-				<div class="bh-field">
-					<label><input type="checkbox" id="bh-chk-groups" /> {{ lang('ADVHIDE_MOD_GROUPS') }} (ID):</label>
-					<input type="text" id="bh-val-groups" placeholder="2,5" />
-				</div>
-				<div class="bh-field">
-					<label><input type="checkbox" id="bh-chk-notgroups" /> {{ lang('ADVHIDE_MOD_NOT_GROUPS') }} (ID):</label>
-					<input type="text" id="bh-val-notgroups" placeholder="6" />
-				</div>
-				<div class="bh-field">
-					<label><input type="checkbox" id="bh-chk-users" /> {{ lang('ADVHIDE_MOD_USERS') }}:</label>
-					<input type="text" id="bh-val-users" placeholder="admin,user1" />
-				</div>
-				<div class="bh-field">
-					<label><input type="checkbox" id="bh-chk-notusers" /> {{ lang('ADVHIDE_MOD_NOT_USERS') }}:</label>
-					<input type="text" id="bh-val-notusers" placeholder="spammer_nick" />
-				</div>
-				<div class="bh-field">
-					<label><input type="checkbox" id="bh-chk-pass" /> {{ lang('ADVHIDE_MOD_PASS') }}:</label>
-					<input type="text" id="bh-val-pass" placeholder="{{ lang('HIDE_PROMPT_PASS') }}" />
-				</div>
-			</div>
+			</form>
 		</div>
 		<div class="advhide-modal-footer">
-			<button type="button" class="button1" id="advhide-insert-bbcode-btn">{{ lang('ADVHIDE_INSERT_BBCODE') }}</button>
-			<button type="button" class="button2 advhide-modal-close">{{ lang('CANCEL') }}</button>
+			<button type="button" id="advhide-builder-insert" class="button button-primary"><i class="fa fa-check"></i> {{ lang('ADVHIDE_INSERT_BBCODE') }}</button>
+			<button type="button" class="button button-secondary advhide-modal-close">{{ lang('ADVHIDE_BUILDER_CLOSE') }}</button>
 		</div>
 	</div>
 </div>
 
-<div id="advhide-audit-modal" class="advhide-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="advhide-audit-title">
-	<div class="advhide-modal-dialog advhide-modal-lg">
+<div id="advhide-audit-modal" class="advhide-modal-overlay" style="display:none;">
+	<div class="advhide-modal-content advhide-modal-large">
 		<div class="advhide-modal-header">
-			<h3 id="advhide-audit-title"><i class="fa fa-shield"></i> {{ lang('ADVHIDE_AUDIT_TITLE') }}</h3>
-			<button type="button" class="advhide-modal-close" aria-label="{{ lang('CLOSE_WINDOW') }}">&times;</button>
+			<h3><i class="fa fa-shield"></i> {{ lang('ADVHIDE_BTN_AUDIT') }}</h3>
+			<button type="button" class="advhide-modal-close">&times;</button>
 		</div>
 		<div class="advhide-modal-body">
-			<div id="advhide-audit-loading" style="text-align:center; padding:20px;">
-				<i class="fa fa-spinner fa-spin fa-2x"></i>
-			</div>
-			<div id="advhide-audit-content" style="display:none;">
-				<div class="advhide-audit-toolbar" style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-					<div>
-						<button type="button" class="button2" id="advhide-trigger-report-btn">
-							<i class="fa fa-flag"></i> {{ lang('ADVHIDE_REPORT_BTN') }}
-						</button>
-					</div>
-					<div id="advhide-mod-actions-wrap" style="display:none;">
-						<button type="button" class="button2" id="advhide-trigger-ban-btn">
-							<i class="fa fa-ban"></i> {{ lang('ADVHIDE_BAN_BTN') }}
-						</button>
-					</div>
+			<div id="advhide-audit-body-loading" style="text-align:center; padding:20px;"><i class="fa fa-spinner fa-spin fa-2x"></i></div>
+			<div id="advhide-audit-body-content" style="display:none;">
+				<div id="advhide-audit-bans-wrap" style="display:none; margin-bottom:15px;">
+					<h4>{{ lang('ADVHIDE_BANS_TITLE') }}</h4>
+					<table class="table1 zebra-table advhide-audit-table">
+						<thead><tr><th>User</th><th>Dates</th><th>Reason</th><th>Action</th></tr></thead>
+						<tbody id="advhide-audit-bans-list"></tbody>
+					</table>
 				</div>
-				<table class="table1 zebra-list" style="width:100%;">
-					<thead>
-						<tr>
-							<th>{{ lang('TIME') }}</th>
-							<th>{{ lang('USERNAME') }}</th>
-							<th>IP</th>
-							<th>{{ lang('STATUS') }}</th>
-							<th>{{ lang('ADVHIDE_PASSWORD') }}</th>
-							<th id="advhide-col-action" style="display:none;">{{ lang('ACTION') }}</th>
-						</tr>
-					</thead>
-					<tbody id="advhide-audit-table-body"></tbody>
+				<h4>{{ lang('ADVHIDE_LOGS_TITLE') }}</h4>
+				<table class="table1 zebra-table advhide-audit-table">
+					<thead><tr><th>Time</th><th>User</th><th>IP</th><th>Status</th><th>Count</th><th>Pass</th><th>Action</th></tr></thead>
+					<tbody id="advhide-audit-logs-list"></tbody>
 				</table>
-			</div>
-		</div>
-		<div class="advhide-modal-footer">
-			<button type="button" class="button2 advhide-modal-close">{{ lang('CLOSE_WINDOW') }}</button>
-		</div>
-	</div>
-</div>
 
-<div id="advhide-ban-modal" class="advhide-modal" style="display:none;" role="dialog" aria-modal="true">
-	<div class="advhide-modal-dialog">
-		<div class="advhide-modal-header">
-			<h3><i class="fa fa-ban"></i> {{ lang('ADVHIDE_BAN_BTN') }}</h3>
-			<button type="button" class="advhide-modal-close">&times;</button>
-		</div>
-		<div class="advhide-modal-body">
-			<input type="hidden" id="advhide-ban-postid" value="" />
-			<input type="hidden" id="advhide-ban-blockid" value="" />
-			<input type="hidden" id="advhide-ban-userid" value="" />
-			<div style="display:flex; flex-direction:column; gap:10px;">
-				<div>
-					<label><strong>{{ lang('USERNAME') }}:</strong></label>
-					<input type="text" id="advhide-ban-username" class="inputbox" style="width:100%;" readonly />
-				</div>
-				<div>
-					<label><strong>{{ lang('ADVHIDE_BAN_DAYS') }}:</strong></label>
-					<input type="number" id="advhide-ban-days" class="inputbox" min="0" value="0" placeholder="0 = {{ lang('PERMANENT') }}" style="width:100%;" />
-					<small>{{ lang('ADVHIDE_BAN_DAYS_EXPLAIN') }}</small>
-				</div>
-				<div>
-					<label><strong>{{ lang('REASON') }}:</strong></label>
-					<textarea id="advhide-ban-reason" class="inputbox" rows="3" style="width:100%;"></textarea>
+				<div id="advhide-ban-action-wrap" style="display:none; margin-top:15px; border-top:1px solid #ddd; padding-top:10px;">
+					<h4>{{ lang('ADVHIDE_BAN_USER') }}</h4>
+					<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+						<input type="text" id="advhide-ban-username" class="inputbox autowidth" placeholder="Username" />
+						<input type="number" id="advhide-ban-days" class="inputbox tiny" placeholder="Days (0=perm)" min="0" value="0" />
+						<input type="text" id="advhide-ban-reason" class="inputbox" placeholder="Reason" style="flex:1;" />
+						<button type="button" id="advhide-ban-submit" class="button button-secondary"><i class="fa fa-ban"></i> {{ lang('ADVHIDE_BAN_BTN') }}</button>
+					</div>
+					<div id="advhide-ban-msg" style="margin-top:6px; font-weight:bold;"></div>
 				</div>
 			</div>
 		</div>
 		<div class="advhide-modal-footer">
-			<button type="button" class="button1" id="advhide-ban-submit-btn">{{ lang('SUBMIT') }}</button>
-			<button type="button" class="button2 advhide-modal-close">{{ lang('CANCEL') }}</button>
-		</div>
-	</div>
-</div>
-
-<div id="advhide-report-modal" class="advhide-modal" style="display:none;" role="dialog" aria-modal="true">
-	<div class="advhide-modal-dialog">
-		<div class="advhide-modal-header">
-			<h3><i class="fa fa-flag"></i> {{ lang('ADVHIDE_REPORT_BTN') }}</h3>
-			<button type="button" class="advhide-modal-close">&times;</button>
-		</div>
-		<div class="advhide-modal-body">
-			<input type="hidden" id="advhide-report-postid" value="" />
-			<input type="hidden" id="advhide-report-blockid" value="" />
-			<div>
-				<label><strong>{{ lang('REASON') }}:</strong></label>
-				<textarea id="advhide-report-reason" class="inputbox" rows="4" style="width:100%;" placeholder="{{ lang('ADVHIDE_REPORT_PLACEHOLDER') }}"></textarea>
-			</div>
-		</div>
-		<div class="advhide-modal-footer">
-			<button type="button" class="button1" id="advhide-report-submit-btn">{{ lang('SUBMIT') }}</button>
-			<button type="button" class="button2 advhide-modal-close">{{ lang('CANCEL') }}</button>
-		</div>
-	</div>
-</div>
-
-<div id="advhide-appeal-modal" class="advhide-modal" style="display:none;" role="dialog" aria-modal="true">
-	<div class="advhide-modal-dialog">
-		<div class="advhide-modal-header">
-			<h3><i class="fa fa-balance-scale"></i> {{ lang('ADVHIDE_APPEAL_BTN') }}</h3>
-			<button type="button" class="advhide-modal-close">&times;</button>
-		</div>
-		<div class="advhide-modal-body">
-			<input type="hidden" id="advhide-appeal-banid" value="" />
-			<div>
-				<label><strong>{{ lang('ADVHIDE_APPEAL_MESSAGE') }}:</strong></label>
-				<textarea id="advhide-appeal-msg" class="inputbox" rows="4" style="width:100%;"></textarea>
-			</div>
-		</div>
-		<div class="advhide-modal-footer">
-			<button type="button" class="button1" id="advhide-appeal-submit-btn">{{ lang('SUBMIT') }}</button>
-			<button type="button" class="button2 advhide-modal-close">{{ lang('CANCEL') }}</button>
+			<button type="button" class="button button-secondary advhide-modal-close">{{ lang('ADVHIDE_BUILDER_CLOSE') }}</button>
 		</div>
 	</div>
 </div>
@@ -169,351 +149,461 @@
 (function($) {
 	'use strict';
 
-	var tokens = {
-		unlock: '{ADVHIDE_TOKEN_UNLOCK}',
-		ban: '{ADVHIDE_TOKEN_BAN}',
-		report: '{ADVHIDE_TOKEN_REPORT}',
-		appeal: '{ADVHIDE_TOKEN_APPEAL}',
-		time: '{ADVHIDE_CREATION_TIME}'
+	var advhideTokens = {
+		unlock: '{{ ADVHIDE_TOKEN_UNLOCK }}',
+		audit: '{{ ADVHIDE_TOKEN_AUDIT }}',
+		ban: '{{ ADVHIDE_TOKEN_BAN }}',
+		report: '{{ ADVHIDE_TOKEN_REPORT }}',
+		appeal: '{{ ADVHIDE_TOKEN_APPEAL }}',
+		time: '{{ ADVHIDE_TOKEN_TIME }}'
 	};
 
-	var urls = {
-		unlock: '{U_ADVANCEDHIDE_UNLOCK}',
-		check_unlock: '{U_ADVANCEDHIDE_CHECK_UNLOCK}',
-		audit: '{U_ADVANCEDHIDE_AUDIT}',
-		ban: '{U_ADVANCEDHIDE_BAN}',
-		report: '{U_ADVANCEDHIDE_REPORT}',
-		appeal: '{U_ADVANCEDHIDE_APPEAL}'
-	};
-
-	// Защита от DOM XSS через экранирование
-	function advhideEscapeHtml(str) {
-		if (str === null || str === undefined) {
-			return '';
-		}
-		return String(str)
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;')
-			.replace(/'/g, '&#039;');
-	}
-
-	// Управление модальными окнами
-	$('.advhide-open-builder-btn').on('click', function(e) {
-		e.preventDefault();
-		$('#advhide-builder-modal').fadeIn(150);
-	});
-
-	$(document).on('click', '.advhide-modal-close', function(e) {
-		e.preventDefault();
-		$(this).closest('.advhide-modal').fadeOut(150);
-	});
-
-	$(document).on('keydown', function(e) {
-		if (e.key === 'Escape' || e.keyCode === 27) {
-			$('.advhide-modal:visible').fadeOut(150);
-		}
-	});
-
-	// Конструктор BBCode
-	$('#bh-val-posts, #bh-val-days').on('input', function() {
-		if (parseInt($(this).val(), 10) < 0) {
-			$(this).val('0');
-		}
-	});
-
-	$('#advhide-insert-bbcode-btn').on('click', function(e) {
-		e.preventDefault();
-		var conds = [];
-
-		if ($('#bh-chk-posts').is(':checked') && $('#bh-val-posts').val()) {
-			conds.push('posts,' + parseInt($('#bh-val-posts').val(), 10));
-		}
-		if ($('#bh-chk-days').is(':checked') && $('#bh-val-days').val()) {
-			conds.push('days,' + parseInt($('#bh-val-days').val(), 10));
-		}
-		if ($('#bh-chk-reply').is(':checked')) conds.push('reply');
-		if ($('#bh-chk-thanks').is(':checked')) conds.push('thanks');
-		if ($('#bh-chk-groups').is(':checked') && $('#bh-val-groups').val()) {
-			conds.push('groups,' + $('#bh-val-groups').val().replace(/[;\]\s]/g, ''));
-		}
-		if ($('#bh-chk-notgroups').is(':checked') && $('#bh-val-notgroups').val()) {
-			conds.push('not_groups,' + $('#bh-val-notgroups').val().replace(/[;\]\s]/g, ''));
-		}
-		if ($('#bh-chk-users').is(':checked') && $('#bh-val-users').val()) {
-			conds.push('users,' + $('#bh-val-users').val().replace(/[;\]]/g, ''));
-		}
-		if ($('#bh-chk-notusers').is(':checked') && $('#bh-val-notusers').val()) {
-			conds.push('not_users,' + $('#bh-val-notusers').val().replace(/[;\]]/g, ''));
-		}
-		if ($('#bh-chk-pass').is(':checked') && $('#bh-val-pass').val()) {
-			conds.push('pass,' + $('#bh-val-pass').val().replace(/[;\]]/g, ''));
-		}
-
-		var opener = (conds.length > 0) ? '[hide=' + conds.join(';') + ']' : '[hide]';
-		var closer = '[/hide]';
-
+	function insertAtCursor(opener, closer) {
 		var textarea = document.getElementById('message') || document.querySelector('textarea[name="message"]');
 		if (textarea) {
-			var start = textarea.selectionStart || 0;
-			var end = textarea.selectionEnd || 0;
-			var sel = textarea.value.substring(start, end);
-			textarea.value = textarea.value.substring(0, start) + opener + sel + closer + textarea.value.substring(end);
-			textarea.focus();
+			if (typeof bbfontstyle === 'function') {
+				bbfontstyle(opener, closer);
+			} else {
+				var start = textarea.selectionStart || 0;
+				var end = textarea.selectionEnd || 0;
+				var sel = textarea.value.substring(start, end);
+				var rep = opener + sel + closer;
+				textarea.value = textarea.value.substring(0, start) + rep + textarea.value.substring(end);
+				textarea.selectionStart = start + opener.length;
+				textarea.selectionEnd = start + opener.length + sel.length;
+				textarea.focus();
+			}
 		}
-		$('#advhide-builder-modal').fadeOut(150);
+	}
+
+	// 1. Конструктор BBCode (Builder Modal)
+	$(document).on('click', '.advhide-btn-builder', function(e) {
+		e.preventDefault();
+		$('#advhide-builder-modal').fadeIn(150);
+		updateBuilderPreview();
 	});
 
-	// Разблокировка по паролю (Unlock)
-	$(document).on('click', '.hide-unlock-btn', function(e) {
-		e.preventDefault();
-		var $btn = $(this);
-		var $box = $btn.closest('.advancedhide-box');
-		var postId = parseInt($btn.data('postid'), 10);
-		var blockId = parseInt($btn.data('blockid'), 10);
-		var pass = $box.find('.hide-pass-input').val();
-		var formToken = $box.find('.hide-token').val() || tokens.unlock;
-		var creationTime = $box.find('.hide-time').val() || tokens.time;
+	$(document).on('click', '.advhide-modal-close, .advhide-modal-overlay', function(e) {
+		if (e.target === this) {
+			$('.advhide-modal-overlay').fadeOut(150);
+		}
+	});
 
-		if (!pass) return;
+	function updateBuilderPreview() {
+		var conds = [];
+
+		if ($('#cond_posts_enable').is(':checked')) {
+			var pVal = parseInt($('#cond_posts_val').val(), 10) || 1;
+			conds.push('posts,' + pVal);
+		}
+		if ($('#cond_days_enable').is(':checked')) {
+			var dVal = parseInt($('#cond_days_val').val(), 10) || 1;
+			conds.push('days,' + dVal);
+		}
+		if ($('#cond_time_enable').is(':checked')) {
+			var tVal = $('#cond_time_val').val().replace(/[;\]]/g, '');
+			if (tVal) conds.push('time,' + tVal);
+		}
+		if ($('#cond_regdate_enable').is(':checked')) {
+			var rdVal = $('#cond_regdate_val').val().replace(/[;\]]/g, '');
+			if (rdVal) conds.push('regdate,' + rdVal);
+		}
+		if ($('#cond_reply').is(':checked')) {
+			conds.push('reply');
+		}
+		if ($('#cond_thanks').is(':checked')) {
+			conds.push('thanks');
+		}
+		if ($('#cond_groups_enable').is(':checked')) {
+			var gVal = $('#cond_groups_val').val().replace(/[;\]\s]/g, '');
+			if (gVal) conds.push('groups,' + gVal);
+		}
+		if ($('#cond_users_enable').is(':checked')) {
+			var uVal = $('#cond_users_val').val().replace(/[;\]]/g, '');
+			if (uVal) conds.push('users,' + uVal);
+		}
+		if ($('#cond_not_groups_enable').is(':checked')) {
+			var ngVal = $('#cond_not_groups_val').val().replace(/[;\]\s]/g, '');
+			if (ngVal) conds.push('not_groups,' + ngVal);
+		}
+		if ($('#cond_not_users_enable').is(':checked')) {
+			var nuVal = $('#cond_not_users_val').val().replace(/[;\]]/g, '');
+			if (nuVal) conds.push('not_users,' + nuVal);
+		}
+		if ($('#cond_pass_enable').is(':checked')) {
+			var passVal = $('#cond_pass_val').val().replace(/[;\]]/g, '');
+			if (passVal) conds.push('pass,' + passVal);
+		}
+
+		var tag = '[hide]';
+		if (conds.length > 0) {
+			tag = '[hide=' + conds.join(';') + ']';
+		} else if ($('#cond_guest').is(':checked')) {
+			tag = '[hide]';
+		}
+
+		$('#advhide-builder-preview-text').html('<code>' + $('<div/>').text(tag + '...' + '[/hide]').html() + '</code>');
+		return tag;
+	}
+
+	$('#advhide-builder-form input').on('change keyup', function() {
+		var id = $(this).attr('id');
+		if (id && id.indexOf('_enable') !== -1) {
+			var targetInput = $('#' + id.replace('_enable', '_val'));
+			targetInput.prop('disabled', !$(this).is(':checked'));
+		}
+		updateBuilderPreview();
+	});
+
+	$('#advhide-builder-insert').on('click', function(e) {
+		e.preventDefault();
+		var tag = updateBuilderPreview();
+		$('#advhide-builder-modal').fadeOut(150);
+		insertAtCursor(tag, '[/hide]');
+	});
+
+	// 2. Обработка кликов по быстрым кнопкам панели
+	$(document).on('click', '.advhide-btn', function(e) {
+		e.preventDefault();
+		var type = $(this).data('type');
+		var opener = '[hide]';
+		var closer = '[/hide]';
+
+		switch (type) {
+			case 'guest':
+				opener = '[hide]';
+				break;
+			case 'posts':
+				var count = prompt('{LA_HIDE_PROMPT_POSTS}', '10');
+				if (count === null) return;
+				opener = '[hide=posts,' + (parseInt(count, 10) || 1) + ']';
+				break;
+			case 'days':
+				var days = prompt('{LA_HIDE_PROMPT_DAYS}', '30');
+				if (days === null) return;
+				opener = '[hide=days,' + (parseInt(days, 10) || 1) + ']';
+				break;
+			case 'time':
+				var dt = prompt('{LA_HIDE_PROMPT_TIME}', '2026-12-31 23:59:59');
+				if (!dt) return;
+				opener = '[hide=time,' + dt.replace(/[;\]]/g, '') + ']';
+				break;
+			case 'regdate':
+				var rd = prompt('{LA_HIDE_PROMPT_REGDATE}', '2026-01-01');
+				if (!rd) return;
+				opener = '[hide=regdate,' + rd.replace(/[;\]]/g, '') + ']';
+				break;
+			case 'reply':
+				opener = '[hide=reply]';
+				break;
+			case 'thanks':
+				opener = '[hide=thanks]';
+				break;
+			case 'groups':
+				var grps = prompt('{LA_HIDE_PROMPT_GROUPS}', '2');
+				if (!grps) return;
+				opener = '[hide=groups,' + grps.replace(/[;\]\s]/g, '') + ']';
+				break;
+			case 'users':
+				var usrs = prompt('{LA_HIDE_PROMPT_USERS}', 'admin,moderator');
+				if (!usrs) return;
+				opener = '[hide=users,' + usrs.replace(/[;\]]/g, '') + ']';
+				break;
+			case 'not_groups':
+				var ngrps = prompt('{LA_HIDE_PROMPT_NOT_GROUPS}', '4');
+				if (!ngrps) return;
+				opener = '[hide=not_groups,' + ngrps.replace(/[;\]\s]/g, '') + ']';
+				break;
+			case 'not_users':
+				var nusrs = prompt('{LA_HIDE_PROMPT_NOT_USERS}', 'spammer');
+				if (!nusrs) return;
+				opener = '[hide=not_users,' + nusrs.replace(/[;\]]/g, '') + ']';
+				break;
+			case 'pass':
+				var pass = prompt('{LA_HIDE_PROMPT_PASS}', '');
+				if (!pass) return;
+				opener = '[hide=pass,' + pass.replace(/[;\]]/g, '') + ']';
+				break;
+		}
+
+		insertAtCursor(opener, closer);
+	});
+
+	// 3. AJAX-разблокировка паролем
+	$(document).on('click', '.hide-pass-submit', function(e) {
+		e.preventDefault();
+		var $btn   = $(this);
+		var $form  = $btn.closest('.hide-pass-form');
+		var $box   = $form.closest('.advancedhide-box');
+		var $msg   = $form.find('.hide-pass-msg');
+
+		var postId   = $form.data('postid');
+		var blockId  = $form.data('blockid');
+		var passVal  = $form.find('.hide-pass-input').val();
+		var formTok  = $form.find('.hide-token').val() || advhideTokens.unlock;
+		var creatTime = $form.find('.hide-creation-time').val() || advhideTokens.time;
+
+		if (!passVal) return;
+
+		var postData = {
+			post_id: postId,
+			block_id: blockId,
+			password: passVal,
+			form_token: formTok,
+			creation_time: creatTime
+		};
+
+		$form.find('input, select, textarea').each(function() {
+			var name = $(this).attr('name');
+			if (name && typeof postData[name] === 'undefined') {
+				postData[name] = $(this).val();
+			}
+		});
 
 		$btn.prop('disabled', true);
+		$msg.text('');
 
 		$.ajax({
-			url: urls.unlock,
+			url: '{{ U_ADVANCEDHIDE_UNLOCK }}',
 			type: 'POST',
 			dataType: 'json',
-			data: {
-				post_id: postId,
-				block_id: blockId,
-				password: pass,
-				form_token: formToken,
-				creation_time: creationTime
-			},
+			data: postData,
 			success: function(res) {
-				$btn.prop('disabled', false);
-				if (res && res.success && res.html) {
+				if (res.success && res.html) {
 					$box.replaceWith(res.html);
-				} else if (res && res.message) {
-					alert(res.message);
+				} else {
+					$msg.text(res.message || 'Error');
+					if (res.new_captcha) {
+						$form.find('.hide-captcha-slot').html(res.new_captcha);
+					}
+					$btn.prop('disabled', false);
 				}
 			},
 			error: function(xhr) {
+				var err = 'Error';
+				if (xhr.responseJSON && xhr.responseJSON.message) {
+					err = xhr.responseJSON.message;
+				}
+				if (xhr.responseJSON && xhr.responseJSON.new_captcha) {
+					$form.find('.hide-captcha-slot').html(xhr.responseJSON.new_captcha);
+				}
+				$msg.text(err);
 				$btn.prop('disabled', false);
-				var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error';
-				alert(err);
 			}
 		});
 	});
 
-	// Перехват внешних AJAX (Thanks / Reputation)
-	$(document).ajaxSuccess(function(event, xhr, settings) {
-		if (settings.url && (settings.url.indexOf('thanks') !== -1 || settings.url.indexOf('reputation') !== -1)) {
-			$('.advancedhide-box.hide-locked').each(function() {
-				var $box = $(this);
-				var boxId = $box.attr('id');
-				if (!boxId) return;
+	// 4. Аудит блока (Audit modal)
+	var currentAuditPost = 0;
+	var currentAuditBlock = 0;
 
-				var parts = boxId.split('-');
-				if (parts.length === 3) {
-					var postId = parseInt(parts[1], 10);
-					var blockId = parseInt(parts[2], 10);
-					var formToken = $box.find('.hide-token').val() || tokens.unlock;
+	$(document).on('click', '.advhide-btn-audit', function(e) {
+		e.preventDefault();
+		currentAuditPost = $(this).data('postid');
+		currentAuditBlock = $(this).data('blockid');
 
-					$.post(urls.check_unlock, {
-						post_id: postId,
-						block_id: blockId,
-						form_token: formToken,
-						creation_time: tokens.time
-					}, function(res) {
-						if (res && res.success && res.unlocked && res.html) {
-							$box.replaceWith(res.html);
-						}
-					});
-				}
-			});
-		}
+		$('#advhide-audit-body-loading').show();
+		$('#advhide-audit-body-content').hide();
+		$('#advhide-audit-modal').fadeIn(150);
+
+		loadAuditData();
 	});
 
-	// Открытие окна аудита
-	$(document).on('click', '.advhide-btn-audit', function(e) {
+	function loadAuditData() {
+		$.ajax({
+			url: '{{ U_ADVANCEDHIDE_AUDIT }}',
+			type: 'GET',
+			dataType: 'json',
+			data: {
+				post_id: currentAuditPost,
+				block_id: currentAuditBlock
+			},
+			success: function(res) {
+				$('#advhide-audit-body-loading').hide();
+				$('#advhide-audit-body-content').show();
+
+				var logsHtml = '';
+				var postAuthorId = parseInt(res.post_author_id, 10) || 0;
+				var isModerator = !!res.is_mod;
+
+				if (res.logs && res.logs.length > 0) {
+					$.each(res.logs, function(i, log) {
+						var color = '#333';
+						if (log.status_raw === 'unlocked' || log.status_raw === 'success') color = '#2e7d32';
+						else if (log.status_raw === 'failed') color = '#c62828';
+						else if (log.status_raw === 'rate_limited') color = '#ef6c00';
+						else if (log.status_raw === 'banned') color = '#ad1457';
+						else if (log.status_raw === 'conditions_failed') color = '#e65100';
+						else if (log.status_raw === 'captcha_failed' || log.status_raw === 'captcha_error') color = '#d84315';
+
+						var isAuthor = (log.user_id == postAuthorId);
+						var banBtnHtml = '';
+						if (isModerator && !isAuthor && log.user_id > 1) {
+							banBtnHtml = '<button type="button" class="button2 advhide-ban-trigger-btn" data-userid="' + log.user_id + '" data-username="' + log.username + '">{{ lang('ADVHIDE_BAN_BTN') }}</button>';
+						} else if (isAuthor) {
+							banBtnHtml = '<span class="advhide-badge-author">{{ lang('ADVHIDE_AUTHOR') }}</span>';
+						}
+
+						logsHtml += '<tr>' +
+							'<td>' + log.attempt_time + '</td>' +
+							'<td>' + log.username + '</td>' +
+							'<td>' + log.user_ip + '</td>' +
+							'<td><strong style="color:' + color + ';">' + log.status + '</strong></td>' +
+							'<td>' + log.attempt_count + '</td>' +
+							'<td><code>' + (log.masked_pass || '-') + '</code></td>' +
+							'<td>' + banBtnHtml + '</td>' +
+						'</tr>';
+					});
+				} else {
+					logsHtml = '<tr><td colspan="7" style="text-align:center;">No logs found</td></tr>';
+				}
+				$('#advhide-audit-logs-list').html(logsHtml);
+
+				if (res.bans && res.bans.length > 0) {
+					var bansHtml = '';
+					$.each(res.bans, function(i, ban) {
+						bansHtml += '<tr>' +
+							'<td>' + ban.username + '</td>' +
+							'<td>' + ban.ban_start + ' - ' + ban.ban_end + '</td>' +
+							'<td>' + (ban.ban_reason || '-') + '</td>' +
+							'<td><button type="button" class="button2 advhide-unban-btn" data-banid="' + ban.ban_id + '">{{ lang('ADVHIDE_UNBAN_BTN') }}</button></td>' +
+						'</tr>';
+					});
+					$('#advhide-audit-bans-list').html(bansHtml);
+					$('#advhide-audit-bans-wrap').show();
+				} else {
+					$('#advhide-audit-bans-wrap').hide();
+				}
+
+				if (res.can_ban) {
+					$('#advhide-ban-action-wrap').show();
+				} else {
+					$('#advhide-ban-action-wrap').hide();
+				}
+			}
+		});
+	}
+
+	// 5. Разблокировка пользователя (Unban)
+	$(document).on('click', '.advhide-unban-btn', function(e) {
+		e.preventDefault();
+		var banId = $(this).data('banid');
+		if (!confirm('Are you sure you want to unban this user?')) return;
+
+		$.ajax({
+			url: '{{ U_ADVANCEDHIDE_BAN }}',
+			type: 'POST',
+			dataType: 'json',
+			data: {
+				action: 'unban',
+				ban_id: banId,
+				post_id: currentAuditPost,
+				block_id: currentAuditBlock,
+				form_token: advhideTokens.ban,
+				creation_time: advhideTokens.time
+			},
+			success: function(res) {
+				if (res.success) {
+					loadAuditData();
+				} else {
+					alert(res.message || 'Error');
+				}
+			}
+		});
+	});
+
+	$(document).on('click', '.advhide-ban-trigger-btn', function(e) {
+		e.preventDefault();
+		var uName = $(this).data('username');
+		$('#advhide-ban-username').val(uName);
+		$('#advhide-ban-reason').focus();
+	});
+
+	// 6. Добавление бана пользователя (Ban)
+	$('#advhide-ban-submit').on('click', function(e) {
+		e.preventDefault();
+		var uName = $('#advhide-ban-username').val();
+		var days = parseInt($('#advhide-ban-days').val(), 10) || 0;
+		var reason = $('#advhide-ban-reason').val();
+
+		if (!uName) {
+			alert('Please enter a username');
+			return;
+		}
+
+		$.ajax({
+			url: '{{ U_ADVANCEDHIDE_BAN }}',
+			type: 'POST',
+			dataType: 'json',
+			data: {
+				action: 'ban',
+				username: uName,
+				days: days,
+				reason: reason,
+				post_id: currentAuditPost,
+				block_id: currentAuditBlock,
+				form_token: advhideTokens.ban,
+				creation_time: advhideTokens.time
+			},
+			success: function(res) {
+				if (res.success) {
+					$('#advhide-ban-username').val('');
+					$('#advhide-ban-reason').val('');
+					$('#advhide-ban-msg').text(res.message).css('color', '#2e7d32');
+					loadAuditData();
+				} else {
+					$('#advhide-ban-msg').text(res.message || 'Error').css('color', '#c62828');
+				}
+			}
+		});
+	});
+
+	// 7. Пожаловаться на перебор паролей (Report)
+	$(document).on('click', '.advhide-btn-report', function(e) {
 		e.preventDefault();
 		var postId = $(this).data('postid');
 		var blockId = $(this).data('blockid');
-
-		$('#advhide-report-postid, #advhide-ban-postid').val(postId);
-		$('#advhide-report-blockid, #advhide-ban-blockid').val(blockId);
-
-		$('#advhide-audit-modal').fadeIn(150);
-		$('#advhide-audit-loading').show();
-		$('#advhide-audit-content').hide();
+		var reason = prompt('{LA_HIDE_REPORT_REASON_PROMPT}', '');
+		if (!reason) return;
 
 		$.ajax({
-			url: urls.audit,
-			type: 'GET',
-			dataType: 'json',
-			data: { post_id: postId, block_id: blockId },
-			success: function(res) {
-				$('#advhide-audit-loading').hide();
-				$('#advhide-audit-content').show();
-
-				var isMod = res.is_mod || false;
-				var authorId = res.post_author_id || 0;
-
-				if (isMod) {
-					$('#advhide-mod-actions-wrap, #advhide-col-action').show();
-				} else {
-					$('#advhide-mod-actions-wrap, #advhide-col-action').hide();
-				}
-
-				var $tbody = $('#advhide-audit-table-body');
-				$tbody.empty();
-
-				if (!res.logs || res.logs.length === 0) {
-					$tbody.append('<tr><td colspan="' + (isMod ? 6 : 5) + '" style="text-align:center;">{{ lang("NO_ENTRIES") }}</td></tr>');
-					return;
-				}
-
-				$.each(res.logs, function(i, item) {
-					var isAuthor = (item.user_id == authorId);
-					var actionHtml = '';
-
-					if (isMod && !isAuthor && item.user_id > 1) {
-						actionHtml = '<button type="button" class="button2 advhide-row-ban-btn" data-userid="' + item.user_id + '" data-username="' + advhideEscapeHtml(item.username) + '">' +
-							'{{ lang("ADVHIDE_BAN_BTN") }}' +
-						'</button>';
-					} else if (isAuthor) {
-						actionHtml = '<span class="advhide-badge-author">{{ lang("ADVHIDE_AUTHOR") }}</span>';
-					}
-
-					var rowHtml = '<tr>' +
-						'<td>' + advhideEscapeHtml(item.time) + '</td>' +
-						'<td>' + advhideEscapeHtml(item.username) + '</td>' +
-						'<td>' + advhideEscapeHtml(item.user_ip) + '</td>' +
-						'<td>' + advhideEscapeHtml(item.status_text || item.status) + '</td>' +
-						'<td>' + advhideEscapeHtml(item.password_used) + '</td>';
-
-					if (isMod) {
-						rowHtml += '<td>' + actionHtml + '</td>';
-					}
-					rowHtml += '</tr>';
-					$tbody.append(rowHtml);
-				});
-			},
-			error: function() {
-				$('#advhide-audit-loading').hide();
-				alert('Audit load error');
-			}
-		});
-	});
-
-	// Жалоба на перебор
-	$('#advhide-trigger-report-btn').on('click', function(e) {
-		e.preventDefault();
-		$('#advhide-report-modal').fadeIn(150);
-	});
-
-	$('#advhide-report-submit-btn').on('click', function(e) {
-		e.preventDefault();
-		var postId = $('#advhide-report-postid').val();
-		var blockId = $('#advhide-report-blockid').val();
-		var reason = $('#advhide-report-reason').val();
-
-		$.ajax({
-			url: urls.report,
+			url: '{{ U_ADVANCEDHIDE_REPORT }}',
 			type: 'POST',
 			dataType: 'json',
 			data: {
 				post_id: postId,
 				block_id: blockId,
 				reason: reason,
-				form_token: tokens.report,
-				creation_time: tokens.time
+				form_token: advhideTokens.report,
+				creation_time: advhideTokens.time
 			},
 			success: function(res) {
 				alert(res.message || 'Report submitted');
-				$('#advhide-report-modal').fadeOut(150);
-			},
-			error: function(xhr) {
-				var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error';
-				alert(err);
 			}
 		});
 	});
 
-	// Блокировка модератором
-	$(document).on('click', '.advhide-row-ban-btn, #advhide-trigger-ban-btn', function(e) {
+	// 8. Подать апелляцию (Appeal)
+	$(document).on('click', '.advhide-btn-appeal', function(e) {
 		e.preventDefault();
-		var userId = $(this).data('userid') || '';
-		var username = $(this).data('username') || '';
-
-		$('#advhide-ban-userid').val(userId);
-		$('#advhide-ban-username').val(username);
-		$('#advhide-ban-modal').fadeIn(150);
-	});
-
-	$('#advhide-ban-submit-btn').on('click', function(e) {
-		e.preventDefault();
-		var postId = $('#advhide-ban-postid').val();
-		var blockId = $('#advhide-ban-blockid').val();
-		var targetUserId = $('#advhide-ban-userid').val();
-		var days = $('#advhide-ban-days').val();
-		var reason = $('#advhide-ban-reason').val();
+		var postId = $(this).data('postid');
+		var blockId = $(this).data('blockid');
+		var reason = prompt('{LA_HIDE_APPEAL_PLACEHOLDER}', '');
+		if (!reason) return;
 
 		$.ajax({
-			url: urls.ban,
+			url: '{{ U_ADVANCEDHIDE_APPEAL }}',
 			type: 'POST',
 			dataType: 'json',
 			data: {
 				post_id: postId,
 				block_id: blockId,
-				target_user_id: targetUserId,
-				duration_days: days,
 				reason: reason,
-				form_token: tokens.ban,
-				creation_time: tokens.time
-			},
-			success: function(res) {
-				alert(res.message || 'User banned');
-				$('#advhide-ban-modal').fadeOut(150);
-			},
-			error: function(xhr) {
-				var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error';
-				alert(err);
-			}
-		});
-	});
-
-	// Апелляция
-	$(document).on('click', '.advhide-open-appeal-btn', function(e) {
-		e.preventDefault();
-		$('#advhide-appeal-banid').val($(this).data('banid'));
-		$('#advhide-appeal-modal').fadeIn(150);
-	});
-
-	$('#advhide-appeal-submit-btn').on('click', function(e) {
-		e.preventDefault();
-		var banId = $('#advhide-appeal-banid').val();
-		var msg = $('#advhide-appeal-msg').val();
-
-		$.ajax({
-			url: urls.appeal,
-			type: 'POST',
-			dataType: 'json',
-			data: {
-				ban_id: banId,
-				appeal_message: msg,
-				form_token: tokens.appeal,
-				creation_time: tokens.time
+				form_token: advhideTokens.appeal,
+				creation_time: advhideTokens.time
 			},
 			success: function(res) {
 				alert(res.message || 'Appeal submitted');
-				$('#advhide-appeal-modal').fadeOut(150);
-			},
-			error: function(xhr) {
-				var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error';
-				alert(err);
 			}
 		});
 	});
