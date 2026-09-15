@@ -1,5 +1,5 @@
 <?php
-namespace gospodinenotik\advancedhide\service;
+namespace vendor\advancedhide\service;
 
 if (!defined('IN_PHPBB'))
 {
@@ -31,16 +31,6 @@ class auth_service
 
 	protected static $thanks_table_exists = null;
 	protected static $user_groups_cache = [];
-	protected static $replied_cache = [];
-	protected static $thanked_cache = [];
-
-	public static function clear_runtime_cache()
-	{
-		self::$thanks_table_exists = null;
-		self::$user_groups_cache = [];
-		self::$replied_cache = [];
-		self::$thanked_cache = [];
-	}
 
 	public function __construct(config $config, user $user, auth $auth, driver_interface $db, tools_interface $db_tools, language $language, cache_interface $cache, $table_prefix, captcha_factory $captcha_factory, $phpbb_root_path, $php_ext)
 	{
@@ -148,8 +138,7 @@ class auth_service
 
 	public function is_block_unlocked($post_id, hide_block $block)
 	{
-		$session_id = !empty($this->user->data['session_id']) ? $this->user->data['session_id'] : ($this->user->session_id ?? 'guest');
-		$cache_key = '_advhide_unlock_' . $session_id;
+		$cache_key = '_advhide_unlock_' . $this->user->data['session_id'];
 		$unlocked = $this->cache->get($cache_key) ?: [];
 
 		if (empty($unlocked[$post_id][$block->block_index]))
@@ -163,8 +152,7 @@ class auth_service
 
 	public function unlock_block($post_id, hide_block $block)
 	{
-		$session_id = !empty($this->user->data['session_id']) ? $this->user->data['session_id'] : ($this->user->session_id ?? 'guest');
-		$cache_key = '_advhide_unlock_' . $session_id;
+		$cache_key = '_advhide_unlock_' . $this->user->data['session_id'];
 		$unlocked = $this->cache->get($cache_key) ?: [];
 		$unlocked[$post_id][$block->block_index] = $block->block_hash;
 		$this->cache->put($cache_key, $unlocked, 1800);
@@ -342,23 +330,6 @@ class auth_service
 			return ['can_view' => true, 'failed_conditions' => [], 'override' => 'mod', 'has_disabled_module' => false];
 		}
 
-		if ($post_id > 0 && $viewer_id > 0)
-		{
-			$ban_info = $this->get_user_block_ban($post_id, $block->block_index, $viewer_id);
-			if ($ban_info !== null)
-			{
-				$reason_text = !empty($ban_info['ban_reason']) ? $this->language->lang('HIDE_BANNED_WITH_REASON', $ban_info['ban_reason']) : $this->language->lang('HIDE_BANNED_FROM_BLOCK');
-				return [
-					'can_view'            => false,
-					'failed_conditions'   => [$reason_text],
-					'override'            => false,
-					'has_disabled_module' => false,
-					'is_banned'           => true,
-					'ban_info'            => $ban_info,
-				];
-			}
-		}
-
 		if ($this->config['advancedhide_author_override'] && $poster_id > 0 && $viewer_id === $poster_id && $is_registered)
 		{
 			return ['can_view' => true, 'failed_conditions' => [], 'override' => 'author', 'has_disabled_module' => false];
@@ -455,22 +426,6 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_USERS_FAILED');
 					}
 					break;
-				case 'not_groups':
-					$gids = array_map('intval', $args);
-					if ($is_registered && $this->check_groups($viewer_id, $gids))
-					{
-						$can_view = false;
-						$failed_conditions[] = $this->language->lang('HIDE_COND_NOT_GROUPS_FAILED');
-					}
-					break;
-				case 'not_users':
-					$uids = array_map('intval', $args);
-					if ($is_registered && in_array($viewer_id, $uids, true))
-					{
-						$can_view = false;
-						$failed_conditions[] = $this->language->lang('HIDE_COND_NOT_USERS_FAILED');
-					}
-					break;
 				case 'pass':
 					if (!$password_verified && !$this->is_block_unlocked($post_id, $block))
 					{
@@ -503,21 +458,11 @@ class auth_service
 		{
 			return false;
 		}
-
-		if (!isset(self::$replied_cache[$topic_id][$user_id]))
-		{
-			$sql = 'SELECT 1 FROM ' . POSTS_TABLE . '
-					WHERE topic_id = ' . (int)$topic_id . '
-					  AND poster_id = ' . (int)$user_id . '
-					  AND post_visibility = 1';
-			$res = $this->db->sql_query_limit($sql, 1);
-			$row = $this->db->sql_fetchrow($res);
-			$this->db->sql_freeresult($res);
-
-			self::$replied_cache[$topic_id][$user_id] = !empty($row);
-		}
-
-		return self::$replied_cache[$topic_id][$user_id];
+		$sql = 'SELECT 1 FROM ' . POSTS_TABLE . ' WHERE topic_id = ' . (int)$topic_id . ' AND poster_id = ' . (int)$user_id . ' AND post_visibility = 1';
+		$res = $this->db->sql_query_limit($sql, 1);
+		$row = $this->db->sql_fetchrow($res);
+		$this->db->sql_freeresult($res);
+		return !empty($row);
 	}
 
 	protected function check_thanked($post_id, $user_id)
@@ -527,38 +472,31 @@ class auth_service
 			return false;
 		}
 
-		if (!isset(self::$thanked_cache[$post_id][$user_id]))
+		$tbl_cfg = $this->config['advancedhide_thanks_table'];
+		$tbl = !empty($tbl_cfg) ? $tbl_cfg : ($this->table_prefix . 'thanks');
+		if (!preg_match('/^[a-zA-Z0-9_]+$/', $tbl))
 		{
-			$tbl_cfg = $this->config['advancedhide_thanks_table'];
-			$tbl = !empty($tbl_cfg) ? $tbl_cfg : ($this->table_prefix . 'thanks');
-			if (!preg_match('/^[a-zA-Z0-9_]+$/', $tbl))
-			{
-				$tbl = $this->table_prefix . 'thanks';
-			}
-
-			if (self::$thanks_table_exists === null)
-			{
-				self::$thanks_table_exists = $this->db_tools->sql_table_exists($tbl);
-			}
-
-			if (!self::$thanks_table_exists)
-			{
-				self::$thanked_cache[$post_id][$user_id] = false;
-				return false;
-			}
-
-			$sql = 'SELECT 1 FROM ' . $tbl . ' WHERE post_id = ' . (int)$post_id . ' AND user_id = ' . (int)$user_id;
-			$res = $this->db->sql_query_limit($sql, 1);
-			$row = $res ? $this->db->sql_fetchrow($res) : false;
-			if ($res)
-			{
-				$this->db->sql_freeresult($res);
-			}
-
-			self::$thanked_cache[$post_id][$user_id] = !empty($row);
+			$tbl = $this->table_prefix . 'thanks';
 		}
 
-		return self::$thanked_cache[$post_id][$user_id];
+		if (self::$thanks_table_exists === null)
+		{
+			self::$thanks_table_exists = $this->db_tools->sql_table_exists($tbl);
+		}
+
+		if (!self::$thanks_table_exists)
+		{
+			return false;
+		}
+
+		$sql = 'SELECT 1 FROM ' . $tbl . ' WHERE post_id = ' . (int)$post_id . ' AND user_id = ' . (int)$user_id;
+		$res = $this->db->sql_query_limit($sql, 1);
+		$row = $res ? $this->db->sql_fetchrow($res) : false;
+		if ($res)
+		{
+			$this->db->sql_freeresult($res);
+		}
+		return !empty($row);
 	}
 
 	protected function check_groups($user_id, array $gids)
@@ -570,7 +508,7 @@ class auth_service
 
 		if (!isset(self::$user_groups_cache[$user_id]))
 		{
-			$user_gids = ($user_id === (int)$this->user->data['user_id']) ? [(int)$this->user->data['group_id']] : [];
+			$user_gids = [(int)$this->user->data['group_id']];
 			$sql = 'SELECT group_id FROM ' . USER_GROUP_TABLE . ' WHERE user_id = ' . (int)$user_id . ' AND user_pending = 0';
 			$res = $this->db->sql_query($sql);
 			while ($row = $this->db->sql_fetchrow($res))
@@ -582,73 +520,5 @@ class auth_service
 		}
 
 		return (bool)array_intersect($gids, self::$user_groups_cache[$user_id]);
-	}
-
-	public function get_user_block_ban($post_id, $block_index, $user_id)
-	{
-		$post_id = (int)$post_id;
-		$block_index = (int)$block_index;
-		$user_id = (int)$user_id;
-
-		if ($post_id <= 0 || $user_id <= 0)
-		{
-			return null;
-		}
-
-		$table = $this->table_prefix . 'advancedhide_bans';
-		$now = time();
-		$sql = 'SELECT * FROM ' . $table . '
-			WHERE post_id = ' . $post_id . '
-				AND block_index = ' . $block_index . '
-				AND user_id = ' . $user_id . '
-				AND (ban_end = 0 OR ban_end > ' . $now . ')';
-		$result = $this->db->sql_query_limit($sql, 1);
-		$ban = $this->db->sql_fetchrow($result);
-		$this->db->sql_freeresult($result);
-
-		return $ban ?: null;
-	}
-
-	public function add_block_ban($post_id, $block_index, $user_id, $banned_by, $days = 0, $reason = '')
-	{
-		$post_id = (int)$post_id;
-		$block_index = (int)$block_index;
-		$user_id = (int)$user_id;
-
-		if ($user_id <= 1)
-		{
-			return false;
-		}
-
-		$banned_by = (int)$banned_by;
-		$days = (int)$days;
-		$now = time();
-		$ban_end = $days > 0 ? ($now + $days * 86400) : 0;
-
-		$table = $this->table_prefix . 'advancedhide_bans';
-		$sql = 'DELETE FROM ' . $table . '
-			WHERE post_id = ' . $post_id . ' AND block_index = ' . $block_index . ' AND user_id = ' . $user_id;
-		$this->db->sql_query($sql);
-
-		$sql_ary = [
-			'post_id'     => $post_id,
-			'block_index' => $block_index,
-			'user_id'     => $user_id,
-			'banned_by'   => $banned_by,
-			'ban_start'   => $now,
-			'ban_end'     => $ban_end,
-			'ban_reason'  => (string)$reason,
-		];
-		$this->db->sql_query('INSERT INTO ' . $table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
-
-		return (int)$this->db->sql_nextid();
-	}
-
-	public function remove_block_ban($ban_id)
-	{
-		$table = $this->table_prefix . 'advancedhide_bans';
-		$sql = 'DELETE FROM ' . $table . ' WHERE ban_id = ' . (int)$ban_id;
-		$this->db->sql_query($sql);
-		return $this->db->sql_affectedrows() > 0;
 	}
 }

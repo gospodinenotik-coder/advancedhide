@@ -1,5 +1,5 @@
 <?php
-namespace gospodinenotik\advancedhide\migrations;
+namespace vendor\advancedhide\migrations;
 
 if (!defined('IN_PHPBB'))
 {
@@ -10,7 +10,7 @@ class v110_modules extends \phpbb\db\migration\migration
 {
 	public static function depends_on()
 	{
-		return ['\gospodinenotik\advancedhide\migrations\v100_initial'];
+		return ['\vendor\advancedhide\migrations\v100_initial'];
 	}
 
 	public function update_schema()

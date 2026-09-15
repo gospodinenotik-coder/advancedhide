@@ -1,5 +1,5 @@
 <?php
-namespace gospodinenotik\advancedhide;
+namespace vendor\advancedhide;
 
 if (!defined('IN_PHPBB'))
 {

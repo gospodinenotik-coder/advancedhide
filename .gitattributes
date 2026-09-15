@@ -1,16 +1,2 @@
+# Auto detect text files and perform LF normalization
 * text=auto
-
-# Исключение служебных файлов разработки из релизного архива
-/.git export-ignore
-/.gitattributes export-ignore
-/.gitignore export-ignore
-/.github export-ignore
-/tests export-ignore
-/scratch export-ignore
-*.py export-ignore
-test_report*.md export-ignore
-ext*.txt export-ignore
-/phpcs.xml export-ignore
-/phpstan.neon export-ignore
-/phpunit.xml.dist export-ignore
-/defect_backlog.json export-ignore

@@ -1,5 +1,5 @@
 <?php
-namespace gospodinenotik\advancedhide\service;
+namespace vendor\advancedhide\service;
 
 if (!defined('IN_PHPBB'))
 {
@@ -161,7 +161,7 @@ class block_parser
 			$sub = explode(',', trim($part));
 			$type = strtolower(trim($sub[0] ?? ''));
 
-			if (($type === 'users' || $type === 'not_users') && count($sub) > 1)
+			if ($type === 'users' && count($sub) > 1)
 			{
 				$uids = [];
 				$usernames = [];
@@ -198,13 +198,12 @@ class block_parser
 					}
 				}
 				$uids = array_unique(array_filter($uids));
-				$new_parts[] = $type . ',' . (!empty($uids) ? implode(',', $uids) : '0');
+				$new_parts[] = 'users,' . (!empty($uids) ? implode(',', $uids) : '0');
 			}
 			elseif ($type === 'pass')
 			{
 				$pass_counter++;
-				// Внутри одного конкретного блока hide разрешен максимум 1 пароль
-				if ($pass_counter > 1)
+				if ($pass_counter > 2 || $total_pass_hashed >= $max_pass_hashes)
 				{
 					$new_parts[] = 'pass_limit_exceeded';
 					continue;
@@ -226,12 +225,6 @@ class block_parser
 				$info = password_get_info($plain_pass);
 				if ($info['algoName'] === 'unknown')
 				{
-					if ($total_pass_hashed >= $max_pass_hashes)
-					{
-						$new_parts[] = 'pass_limit_exceeded';
-						continue;
-					}
-
 					$total_pass_hashed++;
 					$hashed = password_hash($plain_pass, PASSWORD_DEFAULT);
 					$pass_cache[$plain_pass] = $hashed;
@@ -271,14 +264,6 @@ class block_parser
 			return $text;
 		}
 
-		// Изоляция примеров BBCode внутри тегов [code]
-		$code_blocks = [];
-		$text = preg_replace_callback('/\[code(?:=[^\]]*)?\].*?\[\/code\]/is', function($m) use (&$code_blocks) {
-			$placeholder = '___ADVHIDE_CODE_' . count($code_blocks) . '___';
-			$code_blocks[$placeholder] = $m[0];
-			return $placeholder;
-		}, $text);
-
 		$pass_cache = [];
 		$total_pass_hashed = 0;
 		$max_pass_hashes = 3;
@@ -295,11 +280,6 @@ class block_parser
 			$new_cond_str = $this->canonicalize_cond_string($matches[2], $pass_cache, $total_pass_hashed, $max_pass_hashes);
 			return $matches[1] . $new_cond_str . $matches[3];
 		}, $text);
-
-		if (!empty($code_blocks))
-		{
-			$text = strtr($text, $code_blocks);
-		}
 
 		return $text;
 	}

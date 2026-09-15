@@ -1,5 +1,5 @@
 <?php
-namespace gospodinenotik\advancedhide\migrations;
+namespace vendor\advancedhide\migrations;
 
 if (!defined('IN_PHPBB'))
 {
@@ -83,7 +83,7 @@ class v100_initial extends \phpbb\db\migration\migration
 				'acp',
 				'ACP_ADVANCEDHIDE_TITLE',
 				[
-					'module_basename' => '\gospodinenotik\advancedhide\acp\main_module',
+					'module_basename' => '\vendor\advancedhide\acp\main_module',
 					'modes'           => ['settings'],
 				]
 			]],
