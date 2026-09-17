@@ -1,3 +1,4 @@
+/* Общий контейнер скрытого блока */
 .advancedhide-box {
 	border: 1px solid #c2d1e0;
 	border-radius: 4px;
@@ -88,7 +89,6 @@
 	margin-left: 6px;
 }
 
-<<<<<<< HEAD
 .hide-override-badge.mod {
 	background: #0275d8;
 }
@@ -97,12 +97,7 @@
 	background: #5cb85c;
 }
 
-=======
-.hide-override-badge.mod { background: #0275d8; }
-.hide-override-badge.author { background: #5cb85c; }
-
-/* Капча в форме разблокировки */
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
+/* Системная капча внутри формы ввода пароля */
 .advhide-captcha-box {
 	margin-top: 8px;
 	padding: 8px;
@@ -126,23 +121,202 @@
 	margin-top: 4px;
 }
 
-.advhide-editor-buttons {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	margin: 6px 0;
-	padding: 4px;
-	background: #f4f6f8;
-	border: 1px solid #dcdcdc;
-	border-radius: 4px;
+/* Кнопка открытия конструктора в панели редактора */
+.advhide-editor-toolbar {
+	display: inline-block;
+	margin: 4px 2px;
 }
 
-.advhide-btn {
+.advhide-open-builder-btn {
+	background: #eef3f8 !important;
+	border-color: #b7c7d7 !important;
+	color: #105289 !important;
 	cursor: pointer;
-	padding: 3px 8px;
+	padding: 4px 10px;
+	font-size: 0.95em;
+	border-radius: 4px;
+	transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.advhide-open-builder-btn:hover {
+	background: #e0ecf8 !important;
+	border-color: #8cb0d1 !important;
+	color: #0b3d68 !important;
+}
+
+/* Модальное окно конструктора (UI/UX) */
+body.advhide-modal-open {
+	overflow: hidden;
+}
+
+.advhide-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(15, 23, 42, 0.6);
+	backdrop-filter: blur(2px);
+	z-index: 99999;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.advhide-modal {
+	background: #fff;
+	border: 1px solid #cbd5e1;
+	border-radius: 8px;
+	width: 94%;
+	max-width: 680px;
+	max-height: 90vh;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+	animation: advhideModalIn 0.2s ease-out;
+}
+
+@keyframes advhideModalIn {
+	from { opacity: 0; transform: scale(0.96) translateY(-10px); }
+	to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.advhide-modal-header {
+	background: #e9eff5;
+	border-bottom: 1px solid #d4e0ec;
+	padding: 12px 16px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-radius: 8px 8px 0 0;
+}
+
+.advhide-modal-header h3 {
+	margin: 0;
+	font-size: 1.15em;
+	color: #2c3e50;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.advhide-modal-close {
+	background: transparent;
+	border: none;
+	font-size: 1.5em;
+	line-height: 1;
+	color: #64748b;
+	cursor: pointer;
+	padding: 0 4px;
+}
+
+.advhide-modal-close:hover {
+	color: #0f172a;
+}
+
+.advhide-modal-body {
+	padding: 16px;
+	overflow-y: auto;
+}
+
+.advhide-modal-desc {
+	margin: 0 0 14px 0;
+	color: #64748b;
 	font-size: 0.9em;
 }
 
-.advhide-btn i {
-	margin-right: 3px;
+/* Адаптивная двухколоночная сетка условий */
+.advhide-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+}
+
+.advhide-col-full {
+	grid-column: 1 / -1;
+}
+
+.advhide-grid-item {
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+	padding: 8px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.advhide-check-label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9em;
+	cursor: pointer;
+	user-select: none;
+	color: #334155;
+}
+
+.advhide-sub-input {
+	width: 100%;
+	box-sizing: border-box;
+	font-size: 0.9em;
+	padding: 4px 8px;
+	border: 1px solid #cbd5e1;
+	border-radius: 4px;
+	background: #fff;
+}
+
+.advhide-sub-input:disabled {
+	background: #f1f5f9;
+	color: #94a3b8;
+	cursor: not-allowed;
+	border-color: #e2e8f0;
+}
+
+/* Область предпросмотра тега */
+.advhide-preview-wrap {
+	margin-top: 14px;
+}
+
+.advhide-preview-wrap label {
+	font-size: 0.85em;
+	color: #475569;
+	display: block;
+	margin-bottom: 4px;
+}
+
+.advhide-preview-code {
+	background: #0f172a;
+	color: #38bdf8;
+	font-family: Consolas, Monaco, "Courier New", monospace;
+	font-size: 0.9em;
+	padding: 8px 12px;
+	border-radius: 6px;
+	word-break: break-all;
+	border: 1px solid #1e293b;
+}
+
+.advhide-modal-footer {
+	background: #f8fafc;
+	border-top: 1px solid #e2e8f0;
+	padding: 10px 16px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-radius: 0 0 8px 8px;
+}
+
+.advhide-modal-actions {
+	display: flex;
+	gap: 8px;
+}
+
+@media (max-width: 640px) {
+	.advhide-grid {
+		grid-template-columns: 1fr;
+	}
+	.advhide-modal {
+		width: 98%;
+		max-height: 96vh;
+	}
 }

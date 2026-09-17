@@ -1,34 +1,7 @@
 {% if S_ADVHIDE_SHOW_BUTTONS %}
-<div class="advhide-editor-buttons" role="group" aria-label="AdvancedHide BBCode">
-	{% if S_ADVHIDE_MOD_GUEST %}
-	<button type="button" class="button button-secondary advhide-btn" data-type="guest" title="{{ lang('ADVHIDE_BTN_GUEST_TIP') }}"><i class="fa {{ ADVHIDE_ICON_GUEST }} fa-fw"></i> {{ lang('ADVHIDE_MOD_GUEST') }}</button>
-	{% endif %}
-	{% if S_ADVHIDE_MOD_POSTS %}
-	<button type="button" class="button button-secondary advhide-btn" data-type="posts" title="{{ lang('ADVHIDE_BTN_POSTS_TIP') }}"><i class="fa {{ ADVHIDE_ICON_POSTS }} fa-fw"></i> {{ lang('ADVHIDE_MOD_POSTS') }}</button>
-	{% endif %}
-	{% if S_ADVHIDE_MOD_DAYS %}
-	<button type="button" class="button button-secondary advhide-btn" data-type="days" title="{{ lang('ADVHIDE_BTN_DAYS_TIP') }}"><i class="fa {{ ADVHIDE_ICON_DAYS }} fa-fw"></i> {{ lang('ADVHIDE_MOD_DAYS') }}</button>
-	{% endif %}
-	{% if S_ADVHIDE_MOD_TIME %}
-	<button type="button" class="button button-secondary advhide-btn" data-type="time" title="{{ lang('ADVHIDE_BTN_TIME_TIP') }}"><i class="fa {{ ADVHIDE_ICON_TIME }} fa-fw"></i> {{ lang('ADVHIDE_MOD_TIME') }}</button>
-	{% endif %}
-	{% if S_ADVHIDE_MOD_REGDATE %}
-	<button type="button" class="button button-secondary advhide-btn" data-type="regdate" title="{{ lang('ADVHIDE_BTN_REGDATE_TIP') }}"><i class="fa {{ ADVHIDE_ICON_REGDATE }} fa-fw"></i> {{ lang('ADVHIDE_MOD_REGDATE') }}</button>
-	{% endif %}
-	{% if S_ADVHIDE_MOD_REPLY %}
-	<button type="button" class="button button-secondary advhide-btn" data-type="reply" title="{{ lang('ADVHIDE_BTN_REPLY_TIP') }}"><i class="fa {{ ADVHIDE_ICON_REPLY }} fa-fw"></i> {{ lang('ADVHIDE_MOD_REPLY') }}</button>
-	{% endif %}
-	{% if S_ADVHIDE_MOD_THANKS %}
-	<button type="button" class="button button-secondary advhide-btn" data-type="thanks" title="{{ lang('ADVHIDE_BTN_THANKS_TIP') }}"><i class="fa {{ ADVHIDE_ICON_THANKS }} fa-fw"></i> {{ lang('ADVHIDE_MOD_THANKS') }}</button>
-	{% endif %}
-	{% if S_ADVHIDE_MOD_GROUPS %}
-	<button type="button" class="button button-secondary advhide-btn" data-type="groups" title="{{ lang('ADVHIDE_BTN_GROUPS_TIP') }}"><i class="fa {{ ADVHIDE_ICON_GROUPS }} fa-fw"></i> {{ lang('ADVHIDE_MOD_GROUPS') }}</button>
-	{% endif %}
-	{% if S_ADVHIDE_MOD_USERS %}
-	<button type="button" class="button button-secondary advhide-btn" data-type="users" title="{{ lang('ADVHIDE_BTN_USERS_TIP') }}"><i class="fa {{ ADVHIDE_ICON_USERS }} fa-fw"></i> {{ lang('ADVHIDE_MOD_USERS') }}</button>
-	{% endif %}
-	{% if S_ADVHIDE_MOD_PASS %}
-	<button type="button" class="button button-secondary advhide-btn" data-type="pass" title="{{ lang('ADVHIDE_BTN_PASS_TIP') }}"><i class="fa {{ ADVHIDE_ICON_PASS }} fa-fw"></i> {{ lang('ADVHIDE_MOD_PASS') }}</button>
-	{% endif %}
+<div class="advhide-editor-toolbar" role="toolbar" aria-label="{{ lang('ADVHIDE_BUILDER_TITLE') }}">
+	<button type="button" class="button button-secondary advhide-open-builder-btn" id="advhide-open-builder-btn" title="{{ lang('ADVHIDE_BUILDER_TITLE') }}">
+		<i class="fa fa-shield fa-fw" aria-hidden="true"></i> <strong>{{ lang('ADVHIDE_BUILDER_BTN') }}</strong>
+	</button>
 </div>
 {% endif %}

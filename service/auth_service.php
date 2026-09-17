@@ -31,11 +31,8 @@ class auth_service
 
 	protected static $thanks_table_exists = null;
 	protected static $user_groups_cache = [];
-<<<<<<< HEAD
 	protected static $replied_cache = [];
 	protected static $thanked_cache = [];
-=======
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 
 	public function __construct(config $config, user $user, auth $auth, driver_interface $db, tools_interface $db_tools, language $language, cache_interface $cache, $table_prefix, captcha_factory $captcha_factory, $phpbb_root_path, $php_ext)
 	{
@@ -91,6 +88,7 @@ class auth_service
 
 			$captcha->init(CONFIRM_POST);
 
+			// 1. Плагин Вопрос-Ответ (Q&A)
 			if ($captcha instanceof \phpbb\captcha\plugins\qa)
 			{
 				$q_text = $captcha->question_text;
@@ -102,6 +100,7 @@ class auth_service
 					'</div>';
 			}
 
+			// 2. reCAPTCHA v2 (флажок "Я не робот")
 			if ($captcha instanceof \phpbb\captcha\plugins\recaptcha)
 			{
 				$sitekey = $this->config['recaptcha_sitekey'] ?? '';
@@ -111,6 +110,7 @@ class auth_service
 					'</div>';
 			}
 
+			// 3. reCAPTCHA v3 (невидимая оценка доверия)
 			if ($captcha instanceof \phpbb\captcha\plugins\recaptcha_v3)
 			{
 				$sitekey = (string)($this->config['recaptcha_v3_sitekey'] ?? '');
@@ -122,6 +122,7 @@ class auth_service
 					'</div>';
 			}
 
+			// 4. GD Image / Wave / 3D
 			if ($captcha instanceof \phpbb\captcha\plugins\captcha_abstract)
 			{
 				$c_id = $captcha->confirm_id;
@@ -178,28 +179,21 @@ class auth_service
 		$ip_limit     = max(10, $minute_limit * 4);
 		$block_limit  = max(15, $minute_limit * 6);
 
-		// 1. User per minute
 		if (!$this->rl_consume($key_id, $minute_window, $minute_limit))
 		{
 			return false;
 		}
-
-		// 2. User per day
 		if (!$this->rl_consume($key_d_id, $day_window, $day_limit))
 		{
 			$this->rl_refund($key_id, $minute_window);
 			return false;
 		}
-
-		// 3. IP per minute
 		if (!$this->rl_consume($key_ip, $minute_window, $ip_limit))
 		{
 			$this->rl_refund($key_id, $minute_window);
 			$this->rl_refund($key_d_id, $day_window);
 			return false;
 		}
-
-		// 4. Block per minute
 		if (!$this->rl_consume($key_block, $minute_window, $block_limit))
 		{
 			$this->rl_refund($key_id, $minute_window);
@@ -413,10 +407,7 @@ class auth_service
 						$failed_conditions[] = $this->language->lang('HIDE_COND_USERS_FAILED');
 					}
 					break;
-<<<<<<< HEAD
 
-=======
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 				case 'pass':
 					if (!$password_verified && !$this->is_block_unlocked($post_id, $block))
 					{
@@ -451,7 +442,6 @@ class auth_service
 		{
 			return false;
 		}
-<<<<<<< HEAD
 
 		$cache_key = (int)$topic_id . '_' . (int)$user_id;
 		if (isset(self::$replied_cache[$cache_key]))
@@ -459,19 +449,13 @@ class auth_service
 			return self::$replied_cache[$cache_key];
 		}
 
-=======
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 		$sql = 'SELECT 1 FROM ' . POSTS_TABLE . ' WHERE topic_id = ' . (int)$topic_id . ' AND poster_id = ' . (int)$user_id . ' AND post_visibility = 1';
 		$res = $this->db->sql_query_limit($sql, 1);
 		$row = $this->db->sql_fetchrow($res);
 		$this->db->sql_freeresult($res);
-<<<<<<< HEAD
 
 		self::$replied_cache[$cache_key] = !empty($row);
 		return self::$replied_cache[$cache_key];
-=======
-		return !empty($row);
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 	}
 
 	protected function check_thanked($post_id, $user_id)
@@ -481,7 +465,6 @@ class auth_service
 			return false;
 		}
 
-<<<<<<< HEAD
 		$cache_key = (int)$post_id . '_' . (int)$user_id;
 		if (isset(self::$thanked_cache[$cache_key]))
 		{
@@ -495,15 +478,6 @@ class auth_service
 			$tbl = $this->table_prefix . 'thanks';
 		}
 
-=======
-		$tbl_cfg = $this->config['advancedhide_thanks_table'];
-		$tbl = !empty($tbl_cfg) ? $tbl_cfg : ($this->table_prefix . 'thanks');
-		if (!preg_match('/^[a-zA-Z0-9_]+$/', $tbl))
-		{
-			$tbl = $this->table_prefix . 'thanks';
-		}
-
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 		if (self::$thanks_table_exists === null)
 		{
 			self::$thanks_table_exists = $this->db_tools->sql_table_exists($tbl);
@@ -521,13 +495,9 @@ class auth_service
 		{
 			$this->db->sql_freeresult($res);
 		}
-<<<<<<< HEAD
 
 		self::$thanked_cache[$cache_key] = !empty($row);
 		return self::$thanked_cache[$cache_key];
-=======
-		return !empty($row);
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 	}
 
 	protected function check_groups($user_id, array $gids)
@@ -539,16 +509,12 @@ class auth_service
 
 		if (!isset(self::$user_groups_cache[$user_id]))
 		{
-<<<<<<< HEAD
 			$user_gids = [];
 			if ($user_id === (int)$this->user->data['user_id'] && !empty($this->user->data['group_id']))
 			{
 				$user_gids[] = (int)$this->user->data['group_id'];
 			}
 
-=======
-			$user_gids = [(int)$this->user->data['group_id']];
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
 			$sql = 'SELECT group_id FROM ' . USER_GROUP_TABLE . ' WHERE user_id = ' . (int)$user_id . ' AND user_pending = 0';
 			$res = $this->db->sql_query($sql);
 			while ($row = $this->db->sql_fetchrow($res))

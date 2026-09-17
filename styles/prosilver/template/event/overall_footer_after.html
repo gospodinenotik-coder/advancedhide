@@ -1,113 +1,309 @@
+{% if S_ADVHIDE_SHOW_BUTTONS %}
+<div id="advhide-modal-overlay" class="advhide-modal-overlay" style="display:none;" aria-hidden="true" role="dialog" aria-labelledby="advhide-modal-title">
+	<div class="advhide-modal" role="document">
+		<div class="advhide-modal-header">
+			<h3 id="advhide-modal-title"><i class="fa fa-shield"></i> {{ lang('ADVHIDE_MODAL_TITLE') }}</h3>
+			<button type="button" class="advhide-modal-close" id="advhide-modal-close-btn" aria-label="{{ lang('ADVHIDE_MODAL_CANCEL') }}">&times;</button>
+		</div>
+
+		<div class="advhide-modal-body">
+			<p class="advhide-modal-desc">{{ lang('ADVHIDE_MODAL_SUBTITLE') }}</p>
+
+			<form id="advhide-builder-form" onsubmit="return false;">
+				<div class="advhide-grid">
+					<!-- Базовые флаги -->
+					{% if S_ADVHIDE_MOD_GUEST %}
+					<div class="advhide-grid-item advhide-col-full">
+						<label class="advhide-check-label">
+							<input type="checkbox" id="advhide-cb-guest" value="guest" checked="checked" />
+							<span><i class="fa {{ ADVHIDE_ICON_GUEST }} fa-fw"></i> {{ lang('ADVHIDE_FIELD_GUEST') }}</span>
+						</label>
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_REPLY %}
+					<div class="advhide-grid-item">
+						<label class="advhide-check-label">
+							<input type="checkbox" id="advhide-cb-reply" value="reply" />
+							<span><i class="fa {{ ADVHIDE_ICON_REPLY }} fa-fw"></i> {{ lang('ADVHIDE_FIELD_REPLY') }}</span>
+						</label>
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_THANKS %}
+					<div class="advhide-grid-item">
+						<label class="advhide-check-label">
+							<input type="checkbox" id="advhide-cb-thanks" value="thanks" />
+							<span><i class="fa {{ ADVHIDE_ICON_THANKS }} fa-fw"></i> {{ lang('ADVHIDE_FIELD_THANKS') }}</span>
+						</label>
+					</div>
+					{% endif %}
+
+					<!-- Числовые и строковые параметры -->
+					{% if S_ADVHIDE_MOD_POSTS %}
+					<div class="advhide-grid-item">
+						<label class="advhide-check-label">
+							<input type="checkbox" id="advhide-cb-posts" />
+							<span><i class="fa {{ ADVHIDE_ICON_POSTS }} fa-fw"></i> {{ lang('ADVHIDE_FIELD_POSTS') }}</span>
+						</label>
+						<input type="number" id="advhide-val-posts" class="inputbox advhide-sub-input" min="1" placeholder="10" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_DAYS %}
+					<div class="advhide-grid-item">
+						<label class="advhide-check-label">
+							<input type="checkbox" id="advhide-cb-days" />
+							<span><i class="fa {{ ADVHIDE_ICON_DAYS }} fa-fw"></i> {{ lang('ADVHIDE_FIELD_DAYS') }}</span>
+						</label>
+						<input type="number" id="advhide-val-days" class="inputbox advhide-sub-input" min="1" placeholder="30" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_REGDATE %}
+					<div class="advhide-grid-item">
+						<label class="advhide-check-label">
+							<input type="checkbox" id="advhide-cb-regdate" />
+							<span><i class="fa {{ ADVHIDE_ICON_REGDATE }} fa-fw"></i> {{ lang('ADVHIDE_FIELD_REGDATE') }}</span>
+						</label>
+						<input type="date" id="advhide-val-regdate" class="inputbox advhide-sub-input" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_TIME %}
+					<div class="advhide-grid-item">
+						<label class="advhide-check-label">
+							<input type="checkbox" id="advhide-cb-time" />
+							<span><i class="fa {{ ADVHIDE_ICON_TIME }} fa-fw"></i> {{ lang('ADVHIDE_FIELD_TIME') }}</span>
+						</label>
+						<input type="text" id="advhide-val-time" class="inputbox advhide-sub-input" placeholder="2026-12-31 23:59:59" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_GROUPS %}
+					<div class="advhide-grid-item">
+						<label class="advhide-check-label">
+							<input type="checkbox" id="advhide-cb-groups" />
+							<span><i class="fa {{ ADVHIDE_ICON_GROUPS }} fa-fw"></i> {{ lang('ADVHIDE_FIELD_GROUPS') }}</span>
+						</label>
+						<input type="text" id="advhide-val-groups" class="inputbox advhide-sub-input" placeholder="4, 5" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_USERS %}
+					<div class="advhide-grid-item">
+						<label class="advhide-check-label">
+							<input type="checkbox" id="advhide-cb-users" />
+							<span><i class="fa {{ ADVHIDE_ICON_USERS }} fa-fw"></i> {{ lang('ADVHIDE_FIELD_USERS') }}</span>
+						</label>
+						<input type="text" id="advhide-val-users" class="inputbox advhide-sub-input" placeholder="admin, moderator" disabled="disabled" />
+					</div>
+					{% endif %}
+
+					{% if S_ADVHIDE_MOD_PASS %}
+					<div class="advhide-grid-item advhide-col-full">
+						<label class="advhide-check-label">
+							<input type="checkbox" id="advhide-cb-pass" />
+							<span><i class="fa {{ ADVHIDE_ICON_PASS }} fa-fw"></i> {{ lang('ADVHIDE_FIELD_PASS') }}</span>
+						</label>
+						<input type="text" id="advhide-val-pass" class="inputbox advhide-sub-input" placeholder="SecretKey123" disabled="disabled" autocomplete="off" />
+					</div>
+					{% endif %}
+				</div>
+			</form>
+
+			<div class="advhide-preview-wrap">
+				<label><strong>{{ lang('ADVHIDE_MODAL_PREVIEW') }}</strong></label>
+				<div class="advhide-preview-code" id="advhide-preview-code">[hide]...[/hide]</div>
+			</div>
+		</div>
+
+		<div class="advhide-modal-footer">
+			<button type="button" class="button button-secondary" id="advhide-modal-reset-btn">{{ lang('ADVHIDE_MODAL_RESET') }}</button>
+			<div class="advhide-modal-actions">
+				<button type="button" class="button button-secondary" id="advhide-modal-cancel-btn">{{ lang('ADVHIDE_MODAL_CANCEL') }}</button>
+				<button type="button" class="button button-primary" id="advhide-modal-insert-btn"><i class="fa fa-check"></i> {{ lang('ADVHIDE_MODAL_INSERT') }}</button>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+
 <script>
 (function($) {
 	'use strict';
 
-<<<<<<< HEAD
-	// 1. BBCode toolbar handlers
-=======
-	// 1. Обработка кликов по кнопкам в BBCode-редакторе
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
-	$(document).on('click', '.advhide-btn', function(e) {
+	// ==========================================
+	// 1. Конструктор условий скрытия (UI/UX)
+	// ==========================================
+	var $overlay = $('#advhide-modal-overlay');
+
+	function openModal() {
+		$overlay.fadeIn(150).attr('aria-hidden', 'false');
+		$('body').addClass('advhide-modal-open');
+		updatePreview();
+	}
+
+	function closeModal() {
+		$overlay.fadeOut(150).attr('aria-hidden', 'true');
+		$('body').removeClass('advhide-modal-open');
+	}
+
+	$(document).on('click', '#advhide-open-builder-btn', function(e) {
 		e.preventDefault();
-		var type = $(this).data('type');
-		var opener = '[hide]';
-		var closer = '[/hide]';
+		openModal();
+	});
 
-		switch (type) {
-			case 'guest':
-				opener = '[hide]';
-				break;
-			case 'posts':
-				var count = prompt('{LA_HIDE_PROMPT_POSTS}', '10');
-				if (count === null) return;
-				count = parseInt(count, 10) || 1;
-				opener = '[hide=posts,' + count + ']';
-				break;
-			case 'days':
-				var days = prompt('{LA_HIDE_PROMPT_DAYS}', '30');
-				if (days === null) return;
-				days = parseInt(days, 10) || 1;
-				opener = '[hide=days,' + days + ']';
-				break;
-			case 'time':
-				var dt = prompt('{LA_HIDE_PROMPT_TIME}', '2026-12-31 23:59:59');
-				if (!dt) return;
-				opener = '[hide=time,' + dt.replace(/[;\]]/g, '') + ']';
-				break;
-			case 'regdate':
-				var rd = prompt('{LA_HIDE_PROMPT_REGDATE}', '2026-01-01');
-				if (!rd) return;
-				opener = '[hide=regdate,' + rd.replace(/[;\]]/g, '') + ']';
-				break;
-			case 'reply':
-				opener = '[hide=reply]';
-				break;
-			case 'thanks':
-				opener = '[hide=thanks]';
-				break;
-			case 'groups':
-				var grps = prompt('{LA_HIDE_PROMPT_GROUPS}', '2');
-				if (!grps) return;
-				opener = '[hide=groups,' + grps.replace(/[;\]\s]/g, '') + ']';
-				break;
-			case 'users':
-				var usrs = prompt('{LA_HIDE_PROMPT_USERS}', 'admin,moderator');
-				if (!usrs) return;
-				opener = '[hide=users,' + usrs.replace(/[;\]]/g, '') + ']';
-				break;
-			case 'pass':
-				var pass = prompt('{LA_HIDE_PROMPT_PASS}', '');
-				if (!pass) return;
-				opener = '[hide=pass,' + pass.replace(/[;\]]/g, '') + ']';
-				break;
-		}
+	$(document).on('click', '#advhide-modal-close-btn, #advhide-modal-cancel-btn', function(e) {
+		e.preventDefault();
+		closeModal();
+	});
 
-		var textarea = document.getElementById('message') || document.querySelector('textarea[name="message"]');
-		if (textarea) {
-			if (typeof bbfontstyle === 'function') {
-				bbfontstyle(opener, closer);
-			} else {
-				var start = textarea.selectionStart || 0;
-				var end = textarea.selectionEnd || 0;
-				var sel = textarea.value.substring(start, end);
-				var rep = opener + sel + closer;
-				textarea.value = textarea.value.substring(0, start) + rep + textarea.value.substring(end);
-				textarea.selectionStart = start + opener.length;
-				textarea.selectionEnd = start + opener.length + sel.length;
-				textarea.focus();
-			}
+	$overlay.on('click', function(e) {
+		if ($(e.target).is($overlay)) {
+			closeModal();
 		}
 	});
 
-<<<<<<< HEAD
-	// 2. AJAX Password Unlock with Captcha support
+	$(document).on('keydown', function(e) {
+		if (e.key === 'Escape' && $overlay.is(':visible')) {
+			closeModal();
+		}
+	});
+
+	// Синхронизация активности чекбоксов и полей ввода
+	function bindPair(cbId, inputId) {
+		$(document).on('change', cbId, function() {
+			var checked = $(this).is(':checked');
+			$(inputId).prop('disabled', !checked);
+			if (checked) {
+				$(inputId).focus();
+			}
+			updatePreview();
+		});
+		$(document).on('input change', inputId, function() {
+			updatePreview();
+		});
+	}
+
+	bindPair('#advhide-cb-posts', '#advhide-val-posts');
+	bindPair('#advhide-cb-days', '#advhide-val-days');
+	bindPair('#advhide-cb-regdate', '#advhide-val-regdate');
+	bindPair('#advhide-cb-time', '#advhide-val-time');
+	bindPair('#advhide-cb-groups', '#advhide-val-groups');
+	bindPair('#advhide-cb-users', '#advhide-val-users');
+	bindPair('#advhide-cb-pass', '#advhide-val-pass');
+
+	$(document).on('change', '#advhide-cb-guest, #advhide-cb-reply, #advhide-cb-thanks', function() {
+		updatePreview();
+	});
+
+	// Построение итоговой строки условий
+	function buildConditionString() {
+		var conds = [];
+
+		if ($('#advhide-cb-pass').is(':checked')) {
+			var p = ($('#advhide-val-pass').val() || '').replace(/[;\]]/g, '').trim();
+			if (p.length > 0) conds.push('pass,' + p);
+		}
+		if ($('#advhide-cb-posts').is(':checked')) {
+			var pt = parseInt($('#advhide-val-posts').val(), 10) || 1;
+			conds.push('posts,' + pt);
+		}
+		if ($('#advhide-cb-days').is(':checked')) {
+			var d = parseInt($('#advhide-val-days').val(), 10) || 1;
+			conds.push('days,' + d);
+		}
+		if ($('#advhide-cb-regdate').is(':checked')) {
+			var rd = ($('#advhide-val-regdate').val() || '').replace(/[;\]]/g, '').trim();
+			if (rd.length > 0) conds.push('regdate,' + rd);
+		}
+		if ($('#advhide-cb-time').is(':checked')) {
+			var tm = ($('#advhide-val-time').val() || '').replace(/[;\]]/g, '').trim();
+			if (tm.length > 0) conds.push('time,' + tm);
+		}
+		if ($('#advhide-cb-reply').is(':checked')) {
+			conds.push('reply');
+		}
+		if ($('#advhide-cb-thanks').is(':checked')) {
+			conds.push('thanks');
+		}
+		if ($('#advhide-cb-groups').is(':checked')) {
+			var g = ($('#advhide-val-groups').val() || '').replace(/[;\]\s]/g, '').trim();
+			if (g.length > 0) conds.push('groups,' + g);
+		}
+		if ($('#advhide-cb-users').is(':checked')) {
+			var u = ($('#advhide-val-users').val() || '').replace(/[;\]]/g, '').trim();
+			if (u.length > 0) conds.push('users,' + u);
+		}
+		if ($('#advhide-cb-guest').is(':checked') && conds.length === 0) {
+			conds.push('guest');
+		}
+
+		return conds.join(';');
+	}
+
+	function updatePreview() {
+		var condStr = buildConditionString();
+		var tag = (condStr === '' || condStr === 'guest') ? '[hide]...[/hide]' : '[hide=' + condStr + ']...[/hide]';
+		$('#advhide-preview-code').text(tag);
+	}
+
+	// Сброс формы
+	$(document).on('click', '#advhide-modal-reset-btn', function() {
+		$('#advhide-builder-form')[0].reset();
+		$('.advhide-sub-input').prop('disabled', true);
+		$('#advhide-cb-guest').prop('checked', true);
+		updatePreview();
+	});
+
+	// Вставка тега в поле ввода сообщения
+	$(document).on('click', '#advhide-modal-insert-btn', function() {
+		var condStr = buildConditionString();
+		var opener = (condStr === '' || condStr === 'guest') ? '[hide]' : '[hide=' + condStr + ']';
+		var closer = '[/hide]';
+
+		var textarea = document.getElementById('message') || document.querySelector('textarea[name="message"]');
+		if (textarea) {
+			var start = textarea.selectionStart || 0;
+			var end = textarea.selectionEnd || 0;
+			var sel = textarea.value.substring(start, end);
+			var content = sel.length > 0 ? sel : '{{ lang('ADVHIDE_DEFAULT_CONTENT')|escape('js') }}';
+			var rep = opener + content + closer;
+
+			textarea.value = textarea.value.substring(0, start) + rep + textarea.value.substring(end);
+			if (sel.length > 0) {
+				textarea.selectionStart = start + opener.length;
+				textarea.selectionEnd = start + opener.length + sel.length;
+			} else {
+				textarea.selectionStart = start + opener.length;
+				textarea.selectionEnd = start + opener.length + content.length;
+			}
+			textarea.focus();
+		}
+
+		closeModal();
+	});
+
+	// ==========================================
+	// 2. AJAX-разблокировка и системная Captcha
+	// ==========================================
 	$(document).on('click', '.hide-pass-submit', function(e) {
 		e.preventDefault();
-		var $btn      = $(this);
-		var $form     = $btn.closest('.hide-pass-form');
-		var $box      = $form.closest('.advancedhide-box');
-		var $msg      = $form.find('.hide-pass-msg');
-		var postId    = $form.data('postid');
-		var blockId   = $form.data('blockid');
-		var passVal   = $form.find('.hide-pass-input').val();
-		var formTok   = $form.find('.hide-token').val() || '';
-=======
-	// 2. Обработка AJAX-разблокировки паролем с поддержкой Captcha
-	$(document).on('click', '.hide-pass-submit', function(e) {
-		e.preventDefault();
-		var $btn   = $(this);
-		var $form  = $btn.closest('.hide-pass-form');
-		var $box   = $form.closest('.advancedhide-box');
-		var $msg   = $form.find('.hide-pass-msg');
+		var $btn       = $(this);
+		var $form      = $btn.closest('.hide-pass-form');
+		var $box       = $form.closest('.advancedhide-box');
+		var $msg       = $form.find('.hide-pass-msg');
+		var postId     = $form.data('postid');
+		var blockId    = $form.data('blockid');
+		var passVal    = $form.find('.hide-pass-input').val();
+		var formTok    = $form.find('.hide-token').val() || '';
+		var creatTime  = $form.find('.hide-creation-time').val() || '';
 
-		var postId   = $form.data('postid');
-		var blockId  = $form.data('blockid');
-		var passVal  = $form.find('.hide-pass-input').val();
-		var formTok  = $form.find('.hide-token').val() || '';
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
-		var creatTime = $form.find('.hide-creation-time').val() || '';
-
-		if (!passVal) return;
+		if (!passVal) {
+			$form.find('.hide-pass-input').focus();
+			return;
+		}
 
 		var postData = {
 			post_id: postId,
@@ -117,11 +313,7 @@
 			creation_time: creatTime
 		};
 
-<<<<<<< HEAD
-		// Collect Captcha inputs
-=======
-		// Сбор всех полей Captcha, расположенных внутри этой формы
->>>>>>> 5af1a80df62317c47a5d41f7c158692e36f7ba22
+		// Динамический сбор всех полей капчи (Q&A, GD image, reCAPTCHA v2/v3)
 		$form.find('input, select, textarea').each(function() {
 			var name = $(this).attr('name');
 			if (name && typeof postData[name] === 'undefined') {
@@ -133,7 +325,7 @@
 		$msg.text('');
 
 		$.ajax({
-			url: '{U_ADVANCEDHIDE_UNLOCK}',
+			url: '{{ U_ADVANCEDHIDE_UNLOCK|escape('js') }}',
 			type: 'POST',
 			dataType: 'json',
 			data: postData,
@@ -152,9 +344,9 @@
 				var err = 'Error';
 				if (xhr.responseJSON && xhr.responseJSON.message) {
 					err = xhr.responseJSON.message;
-					if (xhr.responseJSON.new_captcha) {
-						$form.find('.hide-captcha-slot').html(xhr.responseJSON.new_captcha);
-					}
+				}
+				if (xhr.responseJSON && xhr.responseJSON.new_captcha) {
+					$form.find('.hide-captcha-slot').html(xhr.responseJSON.new_captcha);
 				}
 				$msg.text(err);
 				$btn.prop('disabled', false);
