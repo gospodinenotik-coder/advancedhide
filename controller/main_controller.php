@@ -128,6 +128,7 @@ class main_controller
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_RATE_LIMIT_EXCEEDED')], 429);
 		}
 
+		// Captcha Verification (Fail-Closed)
 		// Валидация штатной Captcha ядра phpBB (Fail-Closed)
 		if (!empty($this->config['advancedhide_enable_captcha']))
 		{

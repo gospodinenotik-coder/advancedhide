@@ -133,23 +133,8 @@
 (function($) {
 	'use strict';
 
-	// ==========================================
-	// 1. Конструктор условий скрытия (UI/UX)
-	// ==========================================
-	var $overlay = $('#advhide-modal-overlay');
-
-	function openModal() {
-		$overlay.fadeIn(150).attr('aria-hidden', 'false');
-		$('body').addClass('advhide-modal-open');
-		updatePreview();
-	}
-
-	function closeModal() {
-		$overlay.fadeOut(150).attr('aria-hidden', 'true');
-		$('body').removeClass('advhide-modal-open');
-	}
-
-	$(document).on('click', '#advhide-open-builder-btn', function(e) {
+	// 1. BBCode toolbar handlers and modal opener
+	$(document).on('click', '.advhide-btn, #advhide-open-builder-btn', function(e) {
 		e.preventDefault();
 		openModal();
 	});
@@ -305,6 +290,7 @@
 			return;
 		}
 
+
 		var postData = {
 			post_id: postId,
 			block_id: blockId,
@@ -313,6 +299,7 @@
 			creation_time: creatTime
 		};
 
+		// Collect Captcha inputs
 		// Динамический сбор всех полей капчи (Q&A, GD image, reCAPTCHA v2/v3)
 		$form.find('input, select, textarea').each(function() {
 			var name = $(this).attr('name');
