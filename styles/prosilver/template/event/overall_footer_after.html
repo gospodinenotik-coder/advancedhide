@@ -133,6 +133,26 @@
 (function($) {
 	'use strict';
 
+	var $overlay = $('#advhide-modal-overlay');
+
+	function openModal() {
+		$overlay = $('#advhide-modal-overlay');
+		if ($overlay.length) {
+			$overlay.css('display', 'flex').hide().fadeIn(150).attr('aria-hidden', 'false');
+			$('body').addClass('advhide-modal-open');
+		}
+	}
+
+	function closeModal() {
+		$overlay = $('#advhide-modal-overlay');
+		if ($overlay.length) {
+			$overlay.fadeOut(150, function() {
+				$(this).attr('aria-hidden', 'true');
+			});
+			$('body').removeClass('advhide-modal-open');
+		}
+	}
+
 	// 1. BBCode toolbar handlers and modal opener
 	$(document).on('click', '.advhide-btn, #advhide-open-builder-btn', function(e) {
 		e.preventDefault();
@@ -144,15 +164,18 @@
 		closeModal();
 	});
 
-	$overlay.on('click', function(e) {
-		if ($(e.target).is($overlay)) {
+	$(document).on('click', '#advhide-modal-overlay', function(e) {
+		if (e.target === this) {
 			closeModal();
 		}
 	});
 
 	$(document).on('keydown', function(e) {
-		if (e.key === 'Escape' && $overlay.is(':visible')) {
-			closeModal();
+		if (e.key === 'Escape') {
+			var $ov = $('#advhide-modal-overlay');
+			if ($ov.length && $ov.is(':visible')) {
+				closeModal();
+			}
 		}
 	});
 
