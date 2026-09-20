@@ -75,4 +75,12 @@ $lang = array_merge($lang, [
 	'ADVHIDE_FIELD_GROUPS'              => 'Allowed group IDs (comma-separated):',
 	'ADVHIDE_FIELD_USERS'               => 'Allowed usernames (comma-separated):',
 	'ADVHIDE_FIELD_PASS'                => 'Protect with password:',
+
+        // GDPR / Privacy
+        'PRIVACY_ADVHIDE_USAGE'             => 'AdvancedHide Usage',
+        'PRIVACY_ADVHIDE_USAGE_DESC'        => 'User has interacted with AdvancedHide content protection system (viewed/attempted to unlock hidden content).',
+        
+        // Emergency Kill-Switch
+        'ADVHIDE_EMERGENCY_SHUTDOWN'        => 'Emergency Shutdown Mode Active',
+        'ADVHIDE_EMERGENCY_DESC'            => 'All hidden content is currently inaccessible due to emergency shutdown triggered by administrator.',
 ]);
