@@ -35,6 +35,7 @@ services:
             - '@vendor.advancedhide.auth_service'
             - '%core.root_path%'
             - '%core.php_ext%'
+            - '%core.table_prefix%'
         tags:
             - { name: event.listener }
 

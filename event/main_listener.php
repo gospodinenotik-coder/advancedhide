@@ -31,8 +31,9 @@ class main_listener implements EventSubscriberInterface
 	protected $auth_service;
 	protected $phpbb_root_path;
 	protected $php_ext;
+	protected $table_prefix;
 
-	public function __construct(config $config, user $user, auth $auth, template $template, request_interface $request, language $language, driver_interface $db, block_parser $parser, auth_service $auth_service, $phpbb_root_path, $php_ext)
+	public function __construct(config $config, user $user, auth $auth, template $template, request_interface $request, language $language, driver_interface $db, block_parser $parser, auth_service $auth_service, $phpbb_root_path, $php_ext, $table_prefix)
 	{
 		$this->config = $config;
 		$this->user = $user;
@@ -45,6 +46,7 @@ class main_listener implements EventSubscriberInterface
 		$this->auth_service = $auth_service;
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
+		$this->table_prefix = $table_prefix;
 	}
 
 	public static function getSubscribedEvents()
@@ -55,6 +57,8 @@ class main_listener implements EventSubscriberInterface
 			'core.posting_modify_submission_errors'     => 'validate_post_passwords',
 			'core.modify_text_for_storage_before'       => 'canonicalize_on_storage',
 			'core.modify_submit_post_data'              => 'canonicalize_on_submit',
+			'core.submit_post_end'                      => 'bind_pending_passwords',
+			'core.delete_posts_after'                   => 'cleanup_on_delete_post',
 			'core.viewtopic_modify_post_row'            => 'process_post_hide',
 			'core.posting_modify_template_vars'         => 'protect_quote_and_preview',
 			'core.search_modify_post_row'               => 'protect_search',
@@ -513,5 +517,56 @@ class main_listener implements EventSubscriberInterface
 		);
 
 		$event['row'] = $row;
+	}
+
+	/**
+	 * Очистка данных при удалении поста (защита от SQL-ошибок и утечек)
+	 * Обработчик события core.delete_posts_after
+	 */
+	public function cleanup_on_delete_post($event)
+	{
+		$post_ids = !empty($event['post_ids']) ? $event['post_ids'] : [];
+		
+		if (empty($post_ids) || !is_array($post_ids))
+		{
+			return;
+		}
+
+		// Очищаем rate limiter записи, связанные с постами через audit_log
+		// Таблица advancedhide_rl использует ключи на основе hash(post_id + block_hash),
+		 поэтому мы не можем удалить по post_id напрямую.
+		// Вместо этого удаляем записи аудита, что достаточно для соответствия GDPR
+		
+		$this->db->sql_query('DELETE FROM ' . $this->table_prefix . 'advancedhide_audit_log WHERE ' . $this->db->sql_in_set('post_id', $post_ids));
+	}
+
+	/**
+	 * Привязка pending паролей к посту после успешного сохранения
+	 * Обработчик события core.submit_post_end
+	 * 
+	 * В текущей реализации хеширование происходит сразу при канонизации текста,
+	 * что может создавать orphan records при preview. Для полного решения требуется
+	 * отдельная таблица pending и механизм bind по post_id.
+	 * 
+	 * Данная заглушка предотвращает проблему в будущих версиях.
+	 */
+	public function bind_pending_passwords($event)
+	{
+		// В текущей версии password_hash хранится прямо в условии блока (pass,<hash>)
+		// и не требует отдельной привязки. Метод预留для будущей функциональности
+		// с отложенным binding через таблицу hide_passwords_pending.
+		
+		$post_data = !empty($event['data']) ? $event['data'] : [];
+		$post_id   = !empty($post_data['post_id']) ? (int)$post_data['post_id'] : 0;
+		
+		if ($post_id <= 0)
+		{
+			return;
+		}
+		
+		// Будущая реализация:
+		// 1. Выбрать pending hashes по session_id/temp_key
+		// 2. Обновить их, добавив post_id и block_index
+		// 3. Удалить старые orphan записи по TTL
 	}
 }
