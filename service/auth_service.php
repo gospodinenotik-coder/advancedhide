@@ -258,34 +258,43 @@ class auth_service
 		$table = $this->table_prefix . 'advancedhide_rl';
 		$safe_key = $this->db->sql_escape($key);
 
-		$sql = 'UPDATE ' . $table . ' SET rl_count = rl_count + 1' .
-			' WHERE rl_key = \'' . $safe_key . '\'' .
-			' AND rl_window = ' . (int) $window .
-			' AND rl_count < ' . (int) $limit;
-		$this->db->sql_query($sql);
+		$this->db->sql_begin_transaction();
 
-		if ($this->db->sql_affectedrows() > 0)
+		try
 		{
-			return true;
+			$sql = 'SELECT rl_count FROM ' . $table .
+				' WHERE rl_key = \'' . $safe_key . '\'' .
+				' AND rl_window = ' . (int) $window .
+				' FOR UPDATE';
+			$res = $this->db->sql_query($sql);
+			$row = $this->db->sql_fetchrow($res);
+			$this->db->sql_freeresult($res);
+
+			if ($row && (int)$row['rl_count'] < $limit)
+			{
+				$sql = 'UPDATE ' . $table . ' SET rl_count = rl_count + 1' .
+					' WHERE rl_key = \'' . $safe_key . '\'' .
+					' AND rl_window = ' . (int) $window;
+				$this->db->sql_query($sql);
+				$this->db->sql_commit();
+				return true;
+			}
+			elseif (!$row)
+			{
+				$sql = 'INSERT INTO ' . $table . ' (rl_key, rl_window, rl_count) VALUES (\'' . $safe_key . '\', ' . (int) $window . ', 1)';
+				$this->db->sql_query($sql);
+				$this->db->sql_commit();
+				return true;
+			}
+
+			$this->db->sql_rollback();
+			return false;
 		}
-
-		$this->db->sql_return_on_error(true);
-		$sql = 'INSERT INTO ' . $table . ' (rl_key, rl_window, rl_count) VALUES (\'' . $safe_key . '\', ' . (int) $window . ', 1)';
-		$inserted = $this->db->sql_query($sql);
-		$this->db->sql_return_on_error(false);
-
-		if ($inserted)
+		catch (\Exception $e)
 		{
-			return true;
+			$this->db->sql_rollback();
+			return false;
 		}
-
-		$sql = 'UPDATE ' . $table . ' SET rl_count = rl_count + 1' .
-			' WHERE rl_key = \'' . $safe_key . '\'' .
-			' AND rl_window = ' . (int) $window .
-			' AND rl_count < ' . (int) $limit;
-		$this->db->sql_query($sql);
-
-		return $this->db->sql_affectedrows() > 0;
 	}
 
 	protected function rl_refund($key, $window)
