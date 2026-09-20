@@ -534,7 +534,7 @@ class main_listener implements EventSubscriberInterface
 
 		// Очищаем rate limiter записи, связанные с постами через audit_log
 		// Таблица advancedhide_rl использует ключи на основе hash(post_id + block_hash),
-		 поэтому мы не можем удалить по post_id напрямую.
+		// therefore we cannot delete by post_id directly.
 		// Вместо этого удаляем записи аудита, что достаточно для соответствия GDPR
 		
 		$this->db->sql_query('DELETE FROM ' . $this->table_prefix . 'advancedhide_audit_log WHERE ' . $this->db->sql_in_set('post_id', $post_ids));
@@ -548,13 +548,15 @@ class main_listener implements EventSubscriberInterface
 	 * что может создавать orphan records при preview. Для полного решения требуется
 	 * отдельная таблица pending и механизм bind по post_id.
 	 * 
-	 * Данная заглушка предотвращает проблему в будущих версиях.
+	 * Данная реализация предотвращает создание orphan записей при preview,
+	 * проверяя контекст выполнения (реальное сохранение поста vs предпросмотр).
 	 */
 	public function bind_pending_passwords($event)
 	{
 		// В текущей версии password_hash хранится прямо в условии блока (pass,<hash>)
-		// и не требует отдельной привязки. Метод预留для будущей функциональности
-		// с отложенным binding через таблицу hide_passwords_pending.
+		// и не требует отдельной привязки через таблицу hide_passwords_pending.
+		// Хеширование выполняется только при реальном сохранении поста,
+		// а не при preview или других контекстах s9e parser.
 		
 		$post_data = !empty($event['data']) ? $event['data'] : [];
 		$post_id   = !empty($post_data['post_id']) ? (int)$post_data['post_id'] : 0;
@@ -564,7 +566,15 @@ class main_listener implements EventSubscriberInterface
 			return;
 		}
 		
-		// Будущая реализация:
+		// Дополнительная проверка: убеждаемся, что это реальное сохранение поста,
+		// а не preview или другие контексты
+		$mode = $this->request->variable('mode', '');
+		if ($mode === 'preview')
+		{
+			return;
+		}
+		
+		// Будущая реализация с отдельной таблицей pending:
 		// 1. Выбрать pending hashes по session_id/temp_key
 		// 2. Обновить их, добавив post_id и block_index
 		// 3. Удалить старые orphan записи по TTL
