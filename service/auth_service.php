@@ -312,8 +312,8 @@ class auth_service
 	protected function rl_gc($minute_window, $day_window)
 	{
 		$table = $this->table_prefix . 'advancedhide_rl';
-		$this->db->sql_query('DELETE FROM ' . $table . ' WHERE rl_key LIKE \'m%\' AND rl_window < ' . ($minute_window - 5));
-		$this->db->sql_query('DELETE FROM ' . $table . ' WHERE rl_key LIKE \'d%\' AND rl_window < ' . ($day_window - 3));
+		$this->db->sql_query('DELETE FROM ' . $table . ' WHERE rl_key LIKE \'m%\' AND rl_window < ' . (int) $minute_window);
+		$this->db->sql_query('DELETE FROM ' . $table . ' WHERE rl_key LIKE \'d%\' AND rl_window < ' . (int) $day_window);
 	}
 
 	public function evaluate_block(hide_block $block, array $context = [])
