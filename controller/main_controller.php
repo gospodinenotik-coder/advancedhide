@@ -73,8 +73,8 @@ class main_controller
 		$sql = 'SELECT p.post_id, p.topic_id, p.forum_id, p.poster_id, p.post_text, p.post_visibility, p.bbcode_uid, p.bbcode_bitfield, p.enable_bbcode, p.enable_smilies, p.enable_magic_url, t.topic_visibility
 			FROM ' . POSTS_TABLE . ' p
 			JOIN ' . TOPICS_TABLE . ' t ON (p.topic_id = t.topic_id)
-			WHERE p.post_id = ' . (int)$post_id;
-		$res = $this->db->sql_query($sql);
+			WHERE p.post_id = :post_id';
+		$res = $this->db->sql_query($sql, ['post_id' => $post_id]);
 		$post = $this->db->sql_fetchrow($res);
 		$this->db->sql_freeresult($res);
 
@@ -97,7 +97,11 @@ class main_controller
 
 		if (!empty($forum_data['forum_password']))
 		{
-			$session_passwords = !empty($this->user->data['session_forum_passwords']) ? (array)@unserialize($this->user->data['session_forum_passwords'], ['allowed_classes' => false]) : [];
+			$session_passwords = !empty($this->user->data['session_forum_passwords']) ? json_decode($this->user->data['session_forum_passwords'], true) : [];
+			if (!is_array($session_passwords))
+			{
+				$session_passwords = [];
+			}
 			if (empty($session_passwords[$forum_id]))
 			{
 				return new JsonResponse(['success' => false, 'message' => $this->language->lang('SORRY_AUTH_READ')], 403);

@@ -106,7 +106,7 @@ class main_listener implements EventSubscriberInterface
 
 		$tag = $configurator->tags->add('HIDE');
 		$tag->attributes->add('hide')->defaultValue = 'guest';
-		$filter = new RegexpFilter('/^[a-zA-Z0-9_,;:\/\$\.\-\+ ]*$/D');
+		$filter = new RegexpFilter('/^[a-zA-Z0-9_,;:\/\$\.\-\+ ]{0,255}$/D');
 		$tag->attributes['hide']->filterChain->append($filter);
 		$tag->nestingLimit = 1;
 		$tag->template = '<hide cond="{@hide}"><xsl:apply-templates/></hide>';
@@ -207,7 +207,7 @@ class main_listener implements EventSubscriberInterface
 
 		$now = time();
 		$token_sid = ($this->user->data['user_id'] == ANONYMOUS && !empty($this->config['form_token_sid_guests'])) ? $this->user->session_id : '';
-		$form_token = sha1($now . $this->user->data['user_form_salt'] . 'advancedhide_unlock' . $token_sid);
+		$form_token = hash('sha256', $now . $this->user->data['user_form_salt'] . 'advancedhide_unlock' . $token_sid);
 
 		$idx = 0;
 		$has_locked_attachments = false;
