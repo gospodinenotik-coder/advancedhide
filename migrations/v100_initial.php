@@ -26,6 +26,7 @@ class v100_initial extends \phpbb\db\migration\migration
 					'PRIMARY_KEY' => ['rl_key'],
 					'KEYS' => [
 						'rl_window' => ['INDEX', ['rl_window']],
+						'rl_key_window' => ['INDEX', ['rl_key', 'rl_window']],
 					],
 				],
 			],
