@@ -19,11 +19,14 @@ class v100_initial extends \phpbb\db\migration\migration
 			'add_tables' => [
 				$this->table_prefix . 'advancedhide_rl' => [
 					'COLUMNS' => [
-						'rl_key'    => ['VCHAR:64', ''],
-						'rl_window' => ['UINT:11', 0],
-						'rl_count'  => ['UINT', 0],
+						'rl_key'     => ['VCHAR:64', ''],
+						'rl_window'  => ['UINT:11', 0],
+						'rl_count'   => ['UINT', 0],
 					],
-					'PRIMARY_KEY' => ['rl_key', 'rl_window'],
+					'PRIMARY_KEY' => ['rl_key'],
+					'KEYS' => [
+						'rl_window' => ['INDEX', ['rl_window']],
+					],
 				],
 			],
 		];

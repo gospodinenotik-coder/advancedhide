@@ -32,8 +32,9 @@ class main_controller
 	protected $captcha_factory;
 	protected $phpbb_root_path;
 	protected $php_ext;
+	protected $table_prefix;
 
-	public function __construct(config $config, user $user, auth $auth, driver_interface $db, request_interface $request, language $language, cache_interface $cache, block_parser $parser, auth_service $auth_service, captcha_factory $captcha_factory, $phpbb_root_path, $php_ext)
+	public function __construct(config $config, user $user, auth $auth, driver_interface $db, request_interface $request, language $language, cache_interface $cache, block_parser $parser, auth_service $auth_service, captcha_factory $captcha_factory, $phpbb_root_path, $php_ext, $table_prefix)
 	{
 		$this->config = $config;
 		$this->user = $user;
@@ -47,6 +48,7 @@ class main_controller
 		$this->captcha_factory = $captcha_factory;
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
+		$this->table_prefix = $table_prefix;
 	}
 
 	public function unlock()
@@ -224,33 +226,51 @@ class main_controller
 			}
 
 			$html = '<div class="advancedhide-box hide-unlocked" id="hide-' . $post_id . '-' . $block->block_index . '">' .
+				'<div class="advancedhide-header">' . $this->language->lang('HIDE_UNLOCKED_HEADER') . '</div>' .
+				'<div class="advancedhide-content">' . $rendered_inner . '</div>' .
+				'</div>';
 
-/**
- * Запись в журнал аудита безопасности (Sorokin Action Journal)
- */
-protected function audit_log($action_type, $post_id, $block_index, $result, $details = '')
-{
-global $log;
+			// Аудит: успешная разблокировка
+			$this->audit_log('unlock_success', $post_id, $block->block_index, 'success', json_encode(['user_id' => $user_id]));
 
-$sql_ary = [
-'log_time'     => time(),
-'user_id'      => (int)$this->user->data['user_id'],
-'user_ip'      => $this->user->ip,
-'action_type'  => substr($action_type, 0, 50),
-'post_id'      => (int)$post_id,
-'block_index'  => (int)$block_index,
-'result'       => substr($result, 0, 20),
-'details'      => substr($details, 0, 65535),
-];
+			return new JsonResponse(['success' => true, 'html' => $html]);
+		}
 
-// Вставка в таблицу аудита
-$this->db->sql_query('INSERT INTO ' . $this->table_prefix . 'advancedhide_audit_log ' . $this->db->sql_build_array('INSERT', $sql_ary));
+		// Пароль неверный - возврат лимита
+		$this->auth_service->refund_rate_limit($reservation);
+		
+		// Аудит: неудачная попытка разблокировки
+		$this->audit_log('unlock_attempt', $post_id, $block->block_index, 'failure', json_encode(['reason' => 'wrong_password']));
 
-// Дублирование в системный лог phpBB для интеграции с ACP
-if (isset($log))
-{
-$log_action = 'ADVHIDE_' . strtoupper($action_type);
-$log->add('admin', (int)$this->user->data['user_id'], $this->user->ip, $log_action, false, [], 0, 0);
-}
-}
+		return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_WRONG_PASSWORD')], 403);
+	}
+
+	/**
+	 * Запись в журнал аудита безопасности (Sorokin Action Journal)
+	 */
+	protected function audit_log($action_type, $post_id, $block_index, $result, $details = '')
+	{
+		global $log;
+
+		$sql_ary = [
+			'log_time'     => time(),
+			'user_id'      => (int) $this->user->data['user_id'],
+			'user_ip'      => $this->user->ip,
+			'action_type'  => substr($action_type, 0, 50),
+			'post_id'      => (int) $post_id,
+			'block_index'  => (int) $block_index,
+			'result'       => substr($result, 0, 20),
+			'details'      => substr($details, 0, 65535),
+		];
+
+		// Вставка в таблицу аудита
+		$this->db->sql_query('INSERT INTO ' . $this->table_prefix . 'advancedhide_audit_log ' . $this->db->sql_build_array('INSERT', $sql_ary));
+
+		// Дублирование в системный лог phpBB для интеграции с ACP
+		if (isset($log))
+		{
+			$log_action = 'ADVHIDE_' . strtoupper($action_type);
+			$log->add('admin', (int) $this->user->data['user_id'], $this->user->ip, $log_action, false, [], 0, 0);
+		}
+	}
 }

@@ -53,6 +53,7 @@ services:
             - '@captcha.factory'
             - '%core.root_path%'
             - '%core.php_ext%'
+            - '%core.table_prefix%'
 
     vendor.advancedhide.privacy.provider:
         class: vendor\advancedhide\privacy\provider

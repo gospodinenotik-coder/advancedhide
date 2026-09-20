@@ -70,7 +70,7 @@ class provider implements provider_interface
 		$sql = 'DELETE FROM ' . $rl_table . ' 
 				WHERE rl_key LIKE :user_key';
 		$this->db->sql_query($sql, [
-			'user_key' => '%u_' . $user_id . '%'
+			'user_key' => '%u_' . (int) $user_id . '%'
 		]);
 		
 		// Примечание: основные данные (посты с hide-блоками) остаются,
