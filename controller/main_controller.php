@@ -51,6 +51,17 @@ class main_controller
 
 	public function unlock()
 	{
+		global $log;
+		
+		// Emergency Kill-Switch Check (Fail-Closed)
+		if (!empty($this->config['advancedhide_emergency_shutdown']))
+		{
+			return new JsonResponse([
+				'success' => false, 
+				'message' => $this->language->lang('ADVHIDE_EMERGENCY_SHUTDOWN')
+			], 503);
+		}
+	
 		if (!$this->request->is_ajax())
 		{
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('INVALID_REQUEST')], 400);
@@ -80,6 +91,8 @@ class main_controller
 
 		if (!$post)
 		{
+			// Аудит: попытка доступа к несуществующему блоку (возможная атака перебором)
+			$this->audit_log('unlock_attempt', 0, 0, 'failure', json_encode(['post_id' => $post_id, 'reason' => 'not_found']));
 			return new JsonResponse(['success' => false, 'message' => $this->language->lang('HIDE_BLOCK_NOT_FOUND')], 404);
 		}
 
@@ -211,17 +224,33 @@ class main_controller
 			}
 
 			$html = '<div class="advancedhide-box hide-unlocked" id="hide-' . $post_id . '-' . $block->block_index . '">' .
-				'<div class="hide-header"><i class="fa fa-unlock-alt"></i> ' . htmlspecialchars($this->language->lang('HIDE_TITLE_UNLOCKED'), ENT_QUOTES, 'UTF-8') . '</div>' .
-				'<div class="hide-content">' . $rendered_inner . '</div>' .
-				'</div>';
 
-			return new JsonResponse(['success' => true, 'html' => $html]);
-		}
+/**
+ * Запись в журнал аудита безопасности (Sorokin Action Journal)
+ */
+protected function audit_log($action_type, $post_id, $block_index, $result, $details = '')
+{
+global $log;
 
-		return new JsonResponse([
-			'success'     => false,
-			'message'     => $this->language->lang('HIDE_PASS_INCORRECT'),
-			'new_captcha' => !empty($this->config['advancedhide_enable_captcha']) ? $this->auth_service->generate_captcha_html() : '',
-		], 401);
-	}
+$sql_ary = [
+'log_time'     => time(),
+'user_id'      => (int)$this->user->data['user_id'],
+'user_ip'      => $this->user->ip,
+'action_type'  => substr($action_type, 0, 50),
+'post_id'      => (int)$post_id,
+'block_index'  => (int)$block_index,
+'result'       => substr($result, 0, 20),
+'details'      => substr($details, 0, 65535),
+];
+
+// Вставка в таблицу аудита
+$this->db->sql_query('INSERT INTO ' . $this->table_prefix . 'advancedhide_audit_log ' . $this->db->sql_build_array('INSERT', $sql_ary));
+
+// Дублирование в системный лог phpBB для интеграции с ACP
+if (isset($log))
+{
+$log_action = 'ADVHIDE_' . strtoupper($action_type);
+$log->add('admin', (int)$this->user->data['user_id'], $this->user->ip, $log_action, false, [], 0, 0);
+}
+}
 }

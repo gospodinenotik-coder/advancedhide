@@ -53,3 +53,12 @@ services:
             - '@captcha.factory'
             - '%core.root_path%'
             - '%core.php_ext%'
+
+    vendor.advancedhide.privacy.provider:
+        class: vendor\advancedhide\privacy\provider
+        arguments:
+            - '@dbal.conn'
+            - '%core.table_prefix%'
+            - '@language'
+        tags:
+            - { name: privacy.provider }
