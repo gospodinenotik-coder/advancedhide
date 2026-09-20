@@ -1,72 +1,46 @@
-```
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-*.class
-*.exe
-*.dll
-*.so
-*.a
-*.out
-
 # Dependencies
-node_modules/
-venv/
-.venv/
+vendor/
+
+# Logs
+*.log
+
+# Environment specific files
 .env
 .env.local
 .env.*
 
-# Logs and temp files
-*.log
+# Cache and temporary files
+.cache/
 *.tmp
-*.swp
-*.swo
+*.temp
 
-# Editors
-.vscode/
-.idea/
-
-# System files
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Coverage
-coverage/
-htmlcov/
-.coverage
+# PHP specific
+*.php~
+.php_cs.cache
+.sass-cache/
 
-# Build directories
-dist/
+# Composer (PHP package manager)
+composer.lock
+vendor/composer/installed.json
+
+# Build artifacts
 build/
-target/
-.mypy_cache/
-.pytest_cache/
-.gradle/
+dist/
+coverage/
 
-# Compressed files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
-```
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Security related (since we have security audit migrations)
+config/security.yaml
+config/security.yml
+security/
+app/config/security.yml
+app/config/security.yaml

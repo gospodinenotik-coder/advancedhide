@@ -20,7 +20,7 @@ class v120_security_audit extends \phpbb\db\migration\migration
 				// Таблица журналов аудита безопасности (Sorokin Action Journal)
 				$this->table_prefix . 'advancedhide_audit_log' => [
 					'COLUMNS' => [
-						'log_id'       => ['UINT:auto', null],
+						'log_id'       => ['UINT:auto'],
 						'log_time'     => ['TIMESTAMP', 0],
 						'user_id'      => ['UINT', 0],
 						'user_ip'      => ['VCHAR:45', ''],
