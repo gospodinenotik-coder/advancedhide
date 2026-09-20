@@ -19,7 +19,7 @@ $lang = array_merge($lang, [
 	'ADVANCEDHIDE_SHOW_BUTTONS_EXPLAIN' => 'Display [hide] buttons toolbar above the message input field.',
 	'ADVANCEDHIDE_SECURITY_LEGEND'      => 'Security & Brute-Force Protection',
 	'ADVANCEDHIDE_ENABLE_CAPTCHA'       => 'Enable system Captcha',
-	'ADVANCEDHIDE_ENABLE_CAPTCHA_EXPLAIN' => 'Use board default Captcha plugin (configured in ACP -> Spambot countermeasures) during password unlock attempts.',
+	'ADVANCEDHIDE_ENABLE_CAPTCHA_EXPLAIN' => 'Use board default Captcha plugin (configured in ACP -> Spambot countermeasures) during password unlock attempts. <a href="%s">Configure Captcha</a>',
 	'ADVANCEDHIDE_RL_MINUTE'            => 'Attempts limit per minute',
 	'ADVANCEDHIDE_RL_MINUTE_EXPLAIN'    => 'Maximum password attempts per block within 1 minute.',
 	'ADVANCEDHIDE_RL_DAY'               => 'Attempts limit per day',
@@ -30,4 +30,6 @@ $lang = array_merge($lang, [
 	'ADVANCEDHIDE_TH_STATUS'            => 'Status',
 	'ADVANCEDHIDE_TH_ICON'              => 'FontAwesome Icon',
 	'ADVANCEDHIDE_TH_SETTINGS'          => 'Module Settings',
+	'ADVANCEDHIDE_CAPTCHA_LINK'         => 'Configure Captcha',
+	'ADVANCEDHIDE_PERMISSIONS_LINK'     => 'Configure Permissions',
 ]);
