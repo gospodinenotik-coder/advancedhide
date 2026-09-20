@@ -54,13 +54,18 @@ class main_module
 				$clean_icon  = preg_replace('/[^a-zA-Z0-9_\- ]/', '', $raw_icon);
 
 				$config->set('advancedhide_mod_' . $m, $mod_enabled);
-				$config->set('advancedhide_icon_' . $m, $clean_icon ?: 'fa-eye-slash');
+				$config->set('advancedhide_icon_' . $m, $clean_icon ?: 'fa-lock');
 			}
 
 			trigger_error($language->lang('ACP_ADVANCEDHIDE_SAVED') . adm_back_link($this->u_action));
 		}
 
 		add_form_key('acp_advancedhide');
+
+		// Generate links to captcha and permissions settings
+		global $phpbb_root_path, $php_ext;
+		$captcha_link = append_sid($phpbb_root_path . 'acp_board.' . $php_ext, 'i=acp_board&mode=post#cp_settings');
+		$permissions_link = append_sid($phpbb_root_path . 'acp_permissions.' . $php_ext, 'i=acp_permissions&mode=setting_mask_global');
 
 		$template_vars = [
 			'AUTHOR_OVERRIDE'   => (int)$config['advancedhide_author_override'],
@@ -71,12 +76,14 @@ class main_module
 			'RL_MINUTE_LIMIT'   => (int)($config['advancedhide_rl_minute_limit'] ?? 5),
 			'RL_DAY_LIMIT'      => (int)($config['advancedhide_rl_day_limit'] ?? 30),
 			'U_ACTION'          => $this->u_action,
+			'U_CAPTCHA_SETTINGS'=> $captcha_link,
+			'U_PERMISSIONS'     => $permissions_link,
 		];
 
 		foreach ($modules as $m)
 		{
 			$template_vars['MOD_' . strtoupper($m)]  = (int)($config['advancedhide_mod_' . $m] ?? 1);
-			$template_vars['ICON_' . strtoupper($m)] = $config['advancedhide_icon_' . $m] ?? 'fa-eye-slash';
+			$template_vars['ICON_' . strtoupper($m)] = $config['advancedhide_icon_' . $m] ?? 'fa-lock';
 		}
 
 		$template->assign_vars($template_vars);
